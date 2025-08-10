@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Potluck - Homemade Food Marketplace</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Auth Page Specific Styles */
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #eb9d0e 0%, #2bc253 100%);
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 450px;
+            overflow: hidden;
+        }
+
+        .auth-header {
+            background: linear-gradient(135deg, #eb9d0e 0%, #2bc253 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .auth-header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .auth-header p {
+            margin: 10px 0 0 0;
+            opacity: 0.95;
+        }
+
+        .auth-body {
+            padding: 30px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #eb9d0e;
+            background: white;
+            color: #eb9d0e;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #eb9d0e;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #eb9d0e;
+        }
+
+        .role-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .role-option {
+            padding: 15px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .role-option:hover {
+            border-color: #eb9d0e;
+        }
+
+        .role-option.selected {
+            background: #eb9d0e;
+            color: white;
+            border-color: #eb9d0e;
+        }
+
+        .role-option i {
+            font-size: 2rem;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #eb9d0e 0%, #2bc253 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error-msg {
+            background: #ff6b6b;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-msg {
+            background: #2bc253;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .zip-check {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .zip-check .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .btn-check {
+            padding: 12px 20px;
+            background: #2bc253;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .service-status {
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .service-status.available {
+            background: #e8f5e9;
+            color: #2bc253;
+            border: 1px solid #2bc253;
+        }
+
+        .service-status.unavailable {
+            background: #ffebee;
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>
+                    <span>🍲</span>
+                    <span>Potluck</span>
+                </h1>
+                <p>Fresh Homemade Food Marketplace</p>
+            </div>
+            
+            <div class="auth-body">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="switchTab('login')">Login</button>
+                    <button class="tab-btn" onclick="switchTab('signup')">Sign Up</button>
+                </div>
+
+                <div class="error-msg" id="errorMsg"></div>
+                <div class="success-msg" id="successMsg"></div>
+
+                <!-- Login Form -->
+                <form id="loginForm" style="display: block;">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="loginEmail" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="loginPassword" required>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit">Login</button>
+                </form>
+
+                <!-- Signup Form -->
+                <form id="signupForm" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">I want to:</label>
+                        <div class="role-selector">
+                            <div class="role-option selected" data-role="consumer" onclick="selectRole('consumer')">
+                                <i class="material-icons">shopping_cart</i>
+                                <span>Order Food</span>
+                            </div>
+                            <div class="role-option" data-role="chef" onclick="selectRole('chef')">
+                                <i class="material-icons">restaurant</i>
+                                <span>Cook & Sell</span>
+                            </div>
+                            <div class="role-option" data-role="delivery" onclick="selectRole('delivery')">
+                                <i class="material-icons">delivery_dining</i>
+                                <span>Deliver</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-input" id="signupName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="signupEmail" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="tel" class="form-input" id="signupPhone" placeholder="555-123-4567" required>
+                    </div>
+
+                    <div class="zip-check">
+                        <div class="form-group">
+                            <label class="form-label">ZIP/Postal Code</label>
+                            <input type="text" class="form-input" id="signupZip" placeholder="75201" required>
+                        </div>
+                        <button type="button" class="btn-check" onclick="checkServiceArea()">Check</button>
+                    </div>
+                    <div class="service-status" id="serviceStatus"></div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="signupPassword" required>
+                        <small style="color: #666;">Min 8 chars, include uppercase, lowercase & number</small>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit" id="signupBtn" disabled>Sign Up</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>

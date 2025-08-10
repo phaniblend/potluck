@@ -1,0 +1,79 @@
+On branch master
+
+No commits yet
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.gitignore
+	Procfile
+	README.md
+	backend/app.py
+	backend/config.py
+	backend/config/__init__.py
+	backend/config/database.py
+	backend/config/settings.py
+	backend/events.py
+	backend/middleware/__init__.py
+	backend/middleware/auth.py
+	backend/middleware/logging.py
+	backend/middleware/rbac.py
+	backend/models.py
+	backend/requirements.txt
+	backend/routes/__init__.py
+	backend/routes/admin.py
+	backend/routes/auth.py
+	backend/routes/chef.py
+	backend/routes/common.py
+	backend/routes/consumer.py
+	backend/routes/delivery.py
+	backend/routes/orders.py
+	backend/routes/payments.py
+	backend/tasks.py
+	backend/utils/__init__.py
+	backend/utils/auth_utils.py
+	backend/utils/database.py
+	backend/utils/email.py
+	backend/utils/helpers.py
+	backend/utils/location.py
+	backend/utils/price_advisor.py
+	backend/utils/sms.py
+	backend/utils/translator.py
+	backend/utils/uploads.py
+	backend/utils/validators.py
+	database/init_db.py
+	database/schema.sql
+	database/seed_data.py
+	docs/API.md
+	docs/DEPLOYMENT.md
+	docs/DEVELOPER.md
+	files.txt
+	frontend/css/components.css
+	frontend/css/responsive.css
+	frontend/css/styles.css
+	frontend/index.html
+	frontend/js/api.js
+	frontend/js/app.js
+	frontend/js/auth.js
+	frontend/js/chef.js
+	frontend/js/consumer.js
+	frontend/js/delivery.js
+	frontend/js/maps.js
+	frontend/js/socket.js
+	frontend/js/utils.js
+	frontend/pages/chef-dashboard.html
+	frontend/pages/consumer-dashboard.html
+	frontend/pages/delivery-dashboard.html
+	frontend/pages/login.html
+	frontend/pages/register.html
+	render.yaml
+	runtime.txt
+	scripts/init_db.bat
+	scripts/run_dev.bat
+	scripts/setup_venv.bat
+	tests/backend/test_auth.py
+	tests/backend/test_chef.py
+	tests/backend/test_consumer.py
+	tests/backend/test_delivery.py
+	tests/frontend/test_ui.js
+
+nothing added to commit but untracked files present (use "git add" to track)

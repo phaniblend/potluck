@@ -37,6 +37,7 @@ function selectRole(role) {
     const zipCheckDiv = document.querySelector('.zip-check');
     const serviceStatusDiv = document.getElementById('serviceStatus');
     const signupBtn = document.getElementById('signupBtn');
+    const zipInput = document.getElementById('signupZip');
     
     if (role === 'consumer') {
         // Show ZIP validation for consumers
@@ -44,12 +45,14 @@ function selectRole(role) {
         serviceStatusDiv.style.display = 'none';
         signupBtn.disabled = true; // Disable until ZIP is validated
         zipValidated = false;
+        zipInput.required = true; // Make ZIP required for consumers
     } else {
         // Hide ZIP validation for chefs and delivery agents
         zipCheckDiv.style.display = 'none';
         serviceStatusDiv.style.display = 'none';
         signupBtn.disabled = false; // Enable immediately for service providers
         zipValidated = true;
+        zipInput.required = false; // Make ZIP not required for service providers
     }
 }
 
@@ -227,4 +230,10 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // Initialize role selection (consumer is default)
     selectRole('consumer');
+    
+    // Ensure ZIP field is properly configured on page load
+    const zipInput = document.getElementById('signupZip');
+    if (zipInput) {
+        zipInput.required = true; // Start with ZIP required for consumer
+    }
 });

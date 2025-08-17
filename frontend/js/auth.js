@@ -31,6 +31,25 @@ function selectRole(role) {
         opt.classList.remove('selected');
     });
     document.querySelector(`[data-role="${role}"]`).classList.add('selected');
+    
+    // Show/hide ZIP validation based on role
+    const zipCheckDiv = document.querySelector('.zip-check');
+    const serviceStatusDiv = document.getElementById('serviceStatus');
+    const signupBtn = document.getElementById('signupBtn');
+    
+    if (role === 'consumer') {
+        // Show ZIP validation for consumers
+        zipCheckDiv.style.display = 'flex';
+        serviceStatusDiv.style.display = 'none';
+        signupBtn.disabled = true; // Disable until ZIP is validated
+        zipValidated = false;
+    } else {
+        // Hide ZIP validation for chefs and delivery agents
+        zipCheckDiv.style.display = 'none';
+        serviceStatusDiv.style.display = 'none';
+        signupBtn.disabled = false; // Enable immediately for service providers
+        zipValidated = true;
+    }
 }
 
 // Check if zip code is serviceable
@@ -108,7 +127,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 document.getElementById('signupForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    if (!zipValidated) {
+    // Only require ZIP validation for consumers
+    if (selectedRole === 'consumer' && !zipValidated) {
         showError('Please verify your zip code first');
         return;
     }
@@ -199,4 +219,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const userData = JSON.parse(user);
         redirectToDashboard(userData.user_type);
     }
+    
+    // Initialize role selection (consumer is default)
+    selectRole('consumer');
 });

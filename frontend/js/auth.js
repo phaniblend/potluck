@@ -1,5 +1,5 @@
 // Authentication handling for Potluck
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://www.potluck.cafe/api/';
 let selectedRole = 'consumer';
 let zipValidated = false;
 

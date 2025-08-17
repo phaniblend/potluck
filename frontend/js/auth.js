@@ -64,6 +64,8 @@ async function checkServiceArea() {
     try {
         const url = `${API_URL}/auth/check-service-area`;
         console.log('Making request to:', url); // Debug log
+        console.log('Full URL being fetched:', url); // Additional debug
+        console.log('Protocol:', window.location.protocol); // Check current page protocol
         const response = await fetch(url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},

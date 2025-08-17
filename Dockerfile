@@ -22,8 +22,11 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p /tmp/uploads /tmp/logs
 
+# Set working directory to backend for the application
+WORKDIR /app/backend
+
 # Expose port
 EXPOSE $PORT
 
-# Start command
-CMD cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 4 --timeout 120 
+# Start command - use shell form to expand PORT environment variable
+CMD gunicorn app:app --bind 0.0.0.0:$PORT --workers 4 --timeout 120 

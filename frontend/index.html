@@ -298,12 +298,13 @@
                         <input type="text" class="form-input" id="signupState" name="state" placeholder="TX" required>
                     </div>
 
-                    <div class="zip-check">
-                        <div class="form-group">
-                            <label class="form-label">ZIP/Postal Code</label>
-                            <input type="text" class="form-input" id="signupZip" name="zip_code" placeholder="75201" required>
-                        </div>
-                        <button type="button" class="btn-check" onclick="checkServiceArea()">Check</button>
+                    <div class="form-group">
+                        <label class="form-label">ZIP/Postal Code</label>
+                        <input type="text" class="form-input" id="signupZip" name="zip_code" placeholder="75201" required>
+                    </div>
+                    
+                    <div class="zip-check" id="zipValidationSection">
+                        <button type="button" class="btn-check" onclick="checkServiceArea()">Check Service Area</button>
                     </div>
                     <div class="service-status" id="serviceStatus"></div>
                     

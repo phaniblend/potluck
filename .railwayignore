@@ -1,0 +1,12 @@
+# Railway ignore file - excludes files from deployment
+.git/
+.gitignore
+README.md
+docs/
+tests/
+scripts/
+*.md
+*.txt
+!requirements.txt
+!Procfile
+!runtime.txt 

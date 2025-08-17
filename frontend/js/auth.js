@@ -37,16 +37,21 @@ function selectRole(role) {
     const zipCheckDiv = document.querySelector('.zip-check');
     const serviceStatusDiv = document.getElementById('serviceStatus');
     const signupBtn = document.getElementById('signupBtn');
+    const zipInput = document.getElementById('signupZip');
     
     if (role === 'chef') {
-        // Chefs don't need ZIP validation (they're expanding service)
-        zipCheckDiv.style.display = 'none';
+        // Chefs need ZIP field but no validation (they're expanding service)
+        zipInput.style.display = 'block'; // Show ZIP input
+        zipInput.required = true; // ZIP is still required
+        zipCheckDiv.querySelector('.btn-check').style.display = 'none'; // Hide validation button
         serviceStatusDiv.style.display = 'none';
         signupBtn.disabled = false; // Enable immediately for chefs
         zipValidated = true;
     } else {
         // Consumers and Delivery Agents need ZIP validation
-        zipCheckDiv.style.display = 'flex';
+        zipInput.style.display = 'block'; // Show ZIP input
+        zipInput.required = true; // ZIP is still required
+        zipCheckDiv.querySelector('.btn-check').style.display = 'inline-block'; // Show validation button
         serviceStatusDiv.style.display = 'none';
         signupBtn.disabled = true; // Disable until ZIP is validated
         zipValidated = false;

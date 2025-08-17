@@ -118,6 +118,9 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
         full_name: document.getElementById('signupName').value,
         email: document.getElementById('signupEmail').value,
         phone: document.getElementById('signupPhone').value,
+        address: document.getElementById('signupAddress').value,
+        city: document.getElementById('signupCity').value,
+        state: document.getElementById('signupState').value,
         zip_code: document.getElementById('signupZip').value,
         password: document.getElementById('signupPassword').value
     };

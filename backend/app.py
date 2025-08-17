@@ -81,10 +81,10 @@ def signup_simple():
         if len(data['password']) < 8:
             return jsonify({'success': False, 'error': 'Password must be at least 8 characters'}), 400
         
-        # For chefs and delivery agents, they're expanding service to new areas
-        # For consumers, we validate the service area
-        if data['user_type'] == 'consumer':
-            # Check if service is available in consumer's area
+        # For chefs, they're expanding service to new areas (no validation needed)
+        # For consumers and delivery agents, we validate the service area
+        if data['user_type'] in ['consumer', 'delivery']:
+            # Check if service is available in their area
             dallas_zips = ['75201', '75202', '75203', '75204', '75205', '75206']
             if data['zip_code'] not in dallas_zips:
                 return jsonify({

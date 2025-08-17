@@ -37,22 +37,19 @@ function selectRole(role) {
     const zipCheckDiv = document.querySelector('.zip-check');
     const serviceStatusDiv = document.getElementById('serviceStatus');
     const signupBtn = document.getElementById('signupBtn');
-    const zipInput = document.getElementById('signupZip');
     
-    if (role === 'consumer') {
-        // Show ZIP validation for consumers
+    if (role === 'chef') {
+        // Chefs don't need ZIP validation (they're expanding service)
+        zipCheckDiv.style.display = 'none';
+        serviceStatusDiv.style.display = 'none';
+        signupBtn.disabled = false; // Enable immediately for chefs
+        zipValidated = true;
+    } else {
+        // Consumers and Delivery Agents need ZIP validation
         zipCheckDiv.style.display = 'flex';
         serviceStatusDiv.style.display = 'none';
         signupBtn.disabled = true; // Disable until ZIP is validated
         zipValidated = false;
-        zipInput.required = true; // Make ZIP required for consumers
-    } else {
-        // Hide ZIP validation for chefs and delivery agents
-        zipCheckDiv.style.display = 'none';
-        serviceStatusDiv.style.display = 'none';
-        signupBtn.disabled = false; // Enable immediately for service providers
-        zipValidated = true;
-        zipInput.required = false; // Make ZIP not required for service providers
     }
 }
 
@@ -133,8 +130,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 document.getElementById('signupForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // Only require ZIP validation for consumers
-    if (selectedRole === 'consumer' && !zipValidated) {
+    // Require ZIP validation for consumers and delivery agents
+    if ((selectedRole === 'consumer' || selectedRole === 'delivery') && !zipValidated) {
         showError('Please verify your zip code first');
         return;
     }
@@ -230,10 +227,4 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // Initialize role selection (consumer is default)
     selectRole('consumer');
-    
-    // Ensure ZIP field is properly configured on page load
-    const zipInput = document.getElementById('signupZip');
-    if (zipInput) {
-        zipInput.required = true; // Start with ZIP required for consumer
-    }
 });

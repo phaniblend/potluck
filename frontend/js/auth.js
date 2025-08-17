@@ -1,5 +1,6 @@
 // Authentication handling for Potluck
 const API_URL = 'https://www.potluck.cafe/api/';
+console.log('API_URL set to:', API_URL); // Debug log
 let selectedRole = 'consumer';
 let zipValidated = false;
 
@@ -61,7 +62,9 @@ async function checkServiceArea() {
     }
     
     try {
-        const response = await fetch(`${API_URL}/auth/check-service-area`, {
+        const url = `${API_URL}/auth/check-service-area`;
+        console.log('Making request to:', url); // Debug log
+        const response = await fetch(url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({zip_code: zip})
@@ -146,7 +149,9 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     };
     
     try {
-        const response = await fetch(`${API_URL}/auth/signup`, {
+        const url = `${API_URL}/auth/signup`;
+        console.log('Making signup request to:', url); // Debug log
+        const response = await fetch(url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(formData)

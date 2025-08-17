@@ -9,4 +9,5 @@ scripts/
 *.txt
 !requirements.txt
 !Procfile
-!runtime.txt 
+!runtime.txt
+!Dockerfile 

@@ -147,6 +147,17 @@ class GlobalGeolocationService:
         if not ip_address:
             ip_address = '8.8.8.8'  # Default to Google DNS for testing
         
+        # Handle localhost and internal IPs
+        if ip_address in ['127.0.0.1', 'localhost', '::1'] or ip_address.startswith('192.168.') or ip_address.startswith('10.'):
+            # Return default US location for local development
+            return LocationData(
+                latitude=32.7815, longitude=-96.7968,
+                city='Dallas', state='TX', country='United States', country_code='US',
+                postal_code='75201', timezone='America/Chicago',
+                currency='USD', currency_symbol='$', language='en', language_code='en',
+                phone_code='+1', is_supported=True
+            )
+        
         for api in GlobalGeolocationService.GEOLOCATION_APIS:
             try:
                 url = api['url'].format(ip=ip_address)
@@ -160,7 +171,14 @@ class GlobalGeolocationService:
                 print(f"Error with {api['name']}: {e}")
                 continue
         
-        return None
+        # Fallback to default US location if all APIs fail
+        return LocationData(
+            latitude=32.7815, longitude=-96.7968,
+            city='Dallas', state='TX', country='United States', country_code='US',
+            postal_code='75201', timezone='America/Chicago',
+            currency='USD', currency_symbol='$', language='en', language_code='en',
+            phone_code='+1', is_supported=True
+        )
     
     @staticmethod
     def get_location_by_coordinates(lat: float, lon: float) -> Optional[LocationData]:

@@ -1,5 +1,5 @@
 // Authentication handling for Potluck
-const API_URL = 'http://potluck-production-e91a.up.railway.app/api';
+const API_URL = 'https://potluck-production-e91a.up.railway.app/api';
 console.log('API_URL set to:', API_URL); // Debug log
 let selectedRole = 'consumer';
 let zipValidated = false;

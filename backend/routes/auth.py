@@ -6,18 +6,132 @@ Handles signup, login, logout
 from flask import Blueprint, request, jsonify
 import sys
 import os
+import time
+from collections import defaultdict
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.database import DatabaseHelper, DatabaseConnection
 from utils.auth_utils import AuthUtils, SessionManager, validate_password_strength
 from utils.location import location_service
 
+# Simple in-memory rate limiting (in production, use Redis)
+rate_limit_store = defaultdict(list)
+MAX_ATTEMPTS = 5  # Max attempts per IP
+WINDOW_SECONDS = 300  # 5 minutes
+
+def check_rate_limit(ip_address):
+    """Check if IP is rate limited"""
+    current_time = time.time()
+    
+    # Clean old entries
+    rate_limit_store[ip_address] = [
+        attempt_time for attempt_time in rate_limit_store[ip_address]
+        if current_time - attempt_time < WINDOW_SECONDS
+    ]
+    
+    # Check if limit exceeded
+    if len(rate_limit_store[ip_address]) >= MAX_ATTEMPTS:
+        return False
+    
+    # Add current attempt
+    rate_limit_store[ip_address].append(current_time)
+    return True
+
 bp = Blueprint('auth', __name__)
+
+@bp.route('/validate-location', methods=['POST'])
+def validate_location():
+    """Validate city and state combination"""
+    try:
+        data = request.json
+        city = data.get('city', '').strip()
+        state = data.get('state', '').strip()
+        
+        if not city or not state:
+            return jsonify({'valid': False, 'error': 'City and state are required'}), 400
+        
+        # Check if this city/state combination exists in our service areas
+        valid_combinations = [
+            ('Dallas', 'TX'),
+            ('San Francisco', 'CA'),
+            ('New York', 'NY'),
+            ('Mumbai', 'MH'),
+            ('Delhi', 'DL'),
+            ('Bangalore', 'KA'),
+            ('Mexico City', 'CDMX'),
+            ('Guadalajara', 'JAL'),
+        ]
+        
+        # Normalize for comparison (case-insensitive)
+        city_normalized = city.lower().strip()
+        state_normalized = state.upper().strip()
+        
+        # Check if combination exists
+        is_valid = any(
+            city_normalized == valid_city.lower() and 
+            state_normalized == valid_state.upper()
+            for valid_city, valid_state in valid_combinations
+        )
+        
+        return jsonify({
+            'valid': is_valid,
+            'message': 'Location validated successfully' if is_valid else 'Location not in service area'
+        })
+        
+    except Exception as e:
+        return jsonify({'valid': False, 'error': str(e)}), 500
+
+@bp.route('/test', methods=['GET'])
+def test_auth():
+    """Test endpoint to verify auth routes are working"""
+    return jsonify({
+        'success': True,
+        'message': 'Auth routes are working!',
+        'timestamp': time.time()
+    })
+
+@bp.route('/check-service-area', methods=['POST'])
+def check_service_area():
+    """Check if zip code is in service area"""
+    try:
+        data = request.json
+        zip_code = data.get('zip_code', '').strip()
+        
+        if not zip_code:
+            return jsonify({'success': False, 'error': 'Zip code required'}), 400
+        
+        # Get location info for the zip code
+        location_info = location_service.get_local_market_info(zip_code)
+        
+        if not location_info.get('coordinates'):
+            return jsonify({
+                'success': False,
+                'serviceable': False,
+                'message': 'Service not available in your area yet. We currently serve Dallas, Mumbai, and Mexico City areas.'
+            })
+        
+        return jsonify({
+            'success': True,
+            'serviceable': True,
+            'message': f'Great! We serve {location_info["city"]}, {location_info["state"]} area (ZIP: {zip_code})',
+            'location': location_info['location']
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @bp.route('/signup', methods=['POST'])
 def signup():
     """Register new user"""
     try:
+        # Rate limiting
+        client_ip = request.remote_addr
+        if not check_rate_limit(client_ip):
+            return jsonify({
+                'success': False, 
+                'error': 'Too many signup attempts. Please try again in 5 minutes.'
+            }), 429
+        
         data = request.json
         
         # Validate required fields
@@ -39,6 +153,32 @@ def signup():
                 'success': False, 
                 'error': 'Service not available in your area yet. We currently serve Dallas, Mumbai, and Mexico City areas.'
             }), 400
+        
+        # Validate that city/state match the ZIP code location
+        user_city = data.get('city', '').strip()
+        user_state = data.get('state', '').strip()
+        
+        if user_city and user_state:
+            # Normalize for comparison
+            user_city_normalized = user_city.lower().strip()
+            user_state_normalized = user_state.upper().strip()
+            zip_city_normalized = location_info['city'].lower().strip()
+            zip_state_normalized = location_info['state'].upper().strip()
+            
+            # Check if they match (allow some flexibility for abbreviations)
+            city_matches = (user_city_normalized == zip_city_normalized or 
+                          user_city_normalized in zip_city_normalized or 
+                          zip_city_normalized in user_city_normalized)
+            
+            state_matches = (user_state_normalized == zip_state_normalized or 
+                           user_state_normalized in zip_state_normalized or 
+                           zip_state_normalized in user_state_normalized)
+            
+            if not (city_matches and state_matches):
+                return jsonify({
+                    'success': False,
+                    'error': f'City/State must match the ZIP code location: {location_info["city"]}, {location_info["state"]}'
+                }), 400
         
         # Validate email format
         if not AuthUtils.validate_email(data['email']):

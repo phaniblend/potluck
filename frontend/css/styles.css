@@ -98,6 +98,43 @@ body {
     color: #333;
 }
 
+/* Validation styles */
+.form-input.valid {
+    border-color: #2bc253 !important;
+    box-shadow: 0 0 0 2px rgba(43, 194, 83, 0.2);
+}
+
+.form-input.invalid {
+    border-color: #ff4444 !important;
+    box-shadow: 0 0 0 2px rgba(255, 68, 68, 0.2);
+}
+
+.form-input.validating {
+    border-color: #eb9d0e !important;
+    box-shadow: 0 0 0 2px rgba(235, 157, 14, 0.2);
+}
+
+/* Validation feedback */
+.validation-feedback {
+    font-size: 0.875rem;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.validation-feedback.valid {
+    color: #2bc253;
+}
+
+.validation-feedback.invalid {
+    color: #ff4444;
+}
+
+.validation-feedback.validating {
+    color: #eb9d0e;
+}
+
 .dish-price {
     color: #667eea;
     font-weight: bold;

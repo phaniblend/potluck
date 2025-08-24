@@ -1,5 +1,5 @@
 // Authentication handling for Potluck
-const API_URL = 'http://potluck-production-e91a.up.railway.app/api/';
+const API_URL = 'http://potluck-production-e91a.up.railway.app/api';
 console.log('API_URL set to:', API_URL); // Debug log
 let selectedRole = 'consumer';
 let zipValidated = false;
@@ -93,6 +93,111 @@ async function checkServiceArea() {
     }
 }
 
+// Validate city and state against real geographic data
+async function validateCityState() {
+    const city = document.getElementById('signupCity').value.trim();
+    const state = document.getElementById('signupState').value.trim();
+    
+    if (!city || !state) {
+        return false;
+    }
+    
+    try {
+        const url = `${API_URL}/auth/validate-location`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({city: city, state: state})
+        });
+        
+        const data = await response.json();
+        return data.valid;
+    } catch (error) {
+        console.error('Error validating city/state:', error);
+        return false;
+    }
+}
+
+// Real-time validation for city field
+function validateCityInput() {
+    const cityInput = document.getElementById('signupCity');
+    const city = cityInput.value.trim();
+    
+    // Remove existing classes
+    cityInput.classList.remove('valid', 'invalid', 'validating');
+    
+    if (city.length < 2) {
+        cityInput.classList.remove('valid', 'invalid', 'validating');
+        return;
+    }
+    
+    // Check against common city patterns
+    const cityPattern = /^[A-Za-z\s\-']+$/;
+    if (!cityPattern.test(city)) {
+        cityInput.classList.add('invalid');
+        showError('City name contains invalid characters');
+        return;
+    }
+    
+    // Check for suspicious patterns
+    const suspiciousPatterns = [
+        /^[a-z]{10,}$/i,  // Long random strings
+        /^[a-z]{2,}[0-9]{2,}[a-z]{2,}$/i,  // Mixed alphanumeric patterns
+        /^[a-z]+[0-9]+[a-z]+$/i,  // Alternating letters and numbers
+        /^[a-z]{5,}[0-9]{3,}$/i,  // Many letters followed by many numbers
+    ];
+    
+    for (const pattern of suspiciousPatterns) {
+        if (pattern.test(city)) {
+            cityInput.classList.add('invalid');
+            showError('Please enter a valid city name');
+            return;
+        }
+    }
+    
+    cityInput.classList.add('valid');
+}
+
+// Real-time validation for state field
+function validateStateInput() {
+    const stateInput = document.getElementById('signupState');
+    const state = stateInput.value.trim();
+    
+    // Remove existing classes
+    stateInput.classList.remove('valid', 'invalid', 'validating');
+    
+    if (state.length < 2) {
+        stateInput.classList.remove('valid', 'invalid', 'validating');
+        return;
+    }
+    
+    // Check against common state/province patterns
+    const statePattern = /^[A-Za-z\s\-']+$/;
+    if (!statePattern.test(state)) {
+        stateInput.classList.add('invalid');
+        showError('State/Province contains invalid characters');
+        return;
+    }
+    
+    // Check for suspicious patterns
+    const suspiciousPatterns = [
+        /^[a-z]{10,}$/i,  // Long random strings
+        /^[a-z]{2,}[0-9]{2,}[a-z]{2,}$/i,  // Mixed alphanumeric patterns
+        /^[a-z]+[0-9]+[a-z]+$/i,  // Alternating letters and numbers
+        /^[a-z]{5,}[0-9]{3,}$/i,  // Many letters followed by many numbers
+    ];
+    
+    for (const pattern of suspiciousPatterns) {
+        if (pattern.test(state)) {
+            stateInput.classList.add('invalid');
+            showError('Please enter a valid state/province name');
+            return;
+        }
+    }
+    
+    stateInput.classList.add('valid');
+}
+
 // Handle login
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -138,6 +243,35 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
         return;
     }
     
+    // Validate city and state format
+    const city = document.getElementById('signupCity').value.trim();
+    const state = document.getElementById('signupState').value.trim();
+    
+    if (city.length < 2) {
+        showError('Please enter a valid city name');
+        return;
+    }
+    
+    if (state.length < 2) {
+        showError('Please enter a valid state/province');
+        return;
+    }
+    
+    // Check for suspicious patterns (likely bot input)
+    const suspiciousPatterns = [
+        /^[a-z]{10,}$/i,  // Long random strings
+        /^[a-z]{2,}[0-9]{2,}[a-z]{2,}$/i,  // Mixed alphanumeric patterns
+        /^[a-z]+[0-9]+[a-z]+$/i,  // Alternating letters and numbers
+        /^[a-z]{5,}[0-9]{3,}$/i,  // Many letters followed by many numbers
+    ];
+    
+    for (const pattern of suspiciousPatterns) {
+        if (pattern.test(city) || pattern.test(state)) {
+            showError('Please enter valid city and state names');
+            return;
+        }
+    }
+    
     const formData = {
         user_type: selectedRole,
         full_name: document.getElementById('signupName').value,
@@ -153,13 +287,32 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     try {
         const url = `${API_URL}/auth/signup`;
         console.log('Making signup request to:', url); // Debug log
+        console.log('Request data:', formData); // Debug log
+        
         const response = await fetch(url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(formData)
         });
         
+        console.log('Response status:', response.status); // Debug log
+        console.log('Response headers:', response.headers); // Debug log
+        
+        if (!response.ok) {
+            if (response.status === 0) {
+                showError('Network error: Unable to connect to server. Please check your internet connection.');
+                return;
+            }
+            if (response.status === 429) {
+                showError('Too many signup attempts. Please wait 5 minutes before trying again.');
+                return;
+            }
+            showError(`Server error (${response.status}). Please try again later.`);
+            return;
+        }
+        
         const data = await response.json();
+        console.log('Response data:', data); // Debug log
         
         if (data.success) {
             // Store token and user info
@@ -176,7 +329,12 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
             showError(data.error || 'Signup failed');
         }
     } catch (error) {
-        showError('Network error. Please try again.');
+        console.error('Signup error:', error); // Debug log
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            showError('Network error: Unable to connect to server. Please check your internet connection.');
+        } else {
+            showError('An unexpected error occurred. Please try again.');
+        }
     }
 });
 
@@ -229,4 +387,18 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // Initialize role selection (consumer is default)
     selectRole('consumer');
+    
+    // Add real-time validation for city and state fields
+    const cityInput = document.getElementById('signupCity');
+    const stateInput = document.getElementById('signupState');
+    
+    if (cityInput) {
+        cityInput.addEventListener('input', validateCityInput);
+        cityInput.addEventListener('blur', validateCityInput);
+    }
+    
+    if (stateInput) {
+        stateInput.addEventListener('input', validateStateInput);
+        stateInput.addEventListener('blur', validateStateInput);
+    }
 });

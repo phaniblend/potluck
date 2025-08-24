@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.database import DatabaseHelper, DatabaseConnection
 from utils.auth_utils import AuthUtils, SessionManager, validate_password_strength
 from utils.location import location_service
+from utils.geolocation import geolocation_service
 
 # Simple in-memory rate limiting (in production, use Redis)
 rate_limit_store = defaultdict(list)
@@ -81,6 +82,47 @@ def validate_location():
     except Exception as e:
         return jsonify({'valid': False, 'error': str(e)}), 500
 
+@bp.route('/detect-location', methods=['POST'])
+def detect_location():
+    """Automatically detect user location and return localization data"""
+    try:
+        data = request.json
+        client_ip = request.remote_addr
+        
+        # Get location by IP address
+        location_data = geolocation_service.get_location_by_ip(client_ip)
+        
+        if not location_data:
+            return jsonify({
+                'success': False,
+                'error': 'Could not detect location automatically'
+            }), 400
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'city': location_data.city,
+                'state': location_data.state,
+                'country': location_data.country,
+                'country_code': location_data.country_code,
+                'postal_code': location_data.postal_code,
+                'latitude': location_data.latitude,
+                'longitude': location_data.longitude,
+                'timezone': location_data.timezone,
+                'currency': location_data.currency,
+                'currency_symbol': location_data.currency_symbol,
+                'language': location_data.language,
+                'language_code': location_data.language_code,
+                'phone_code': location_data.phone_code,
+                'is_supported': location_data.is_supported,
+                'pricing_tier': geolocation_service.GLOBAL_LOCALIZATION.get(
+                    location_data.country_code, {}).get('pricing_tier', 'medium')
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @bp.route('/test', methods=['GET'])
 def test_auth():
     """Test endpoint to verify auth routes are working"""
@@ -144,40 +186,57 @@ def signup():
         if data['user_type'] not in ['consumer', 'chef', 'delivery']:
             return jsonify({'success': False, 'error': 'Invalid user type'}), 400
         
-        # Validate zip code and get location info
-        zip_code = data.get('zip_code', '').strip()
-        location_info = location_service.get_local_market_info(zip_code)
+        # Get user's location automatically (IP-based geolocation)
+        client_ip = request.remote_addr
+        user_location = geolocation_service.get_location_by_ip(client_ip)
         
-        if not location_info.get('coordinates'):
+        if not user_location:
             return jsonify({
                 'success': False, 
-                'error': 'Service not available in your area yet. We currently serve Dallas, Mumbai, and Mexico City areas.'
+                'error': 'Could not detect your location automatically. Please try again.'
             }), 400
         
-        # Validate that city/state match the ZIP code location
-        user_city = data.get('city', '').strip()
-        user_state = data.get('state', '').strip()
+        # Use provided ZIP code if available, otherwise use detected postal code
+        zip_code = data.get('zip_code', '').strip() or user_location.postal_code
         
-        if user_city and user_state:
-            # Normalize for comparison
-            user_city_normalized = user_city.lower().strip()
-            user_state_normalized = user_state.upper().strip()
-            zip_city_normalized = location_info['city'].lower().strip()
-            zip_state_normalized = location_info['state'].upper().strip()
-            
-            # Check if they match (allow some flexibility for abbreviations)
-            city_matches = (user_city_normalized == zip_city_normalized or 
-                          user_city_normalized in zip_city_normalized or 
-                          zip_city_normalized in user_city_normalized)
-            
-            state_matches = (user_state_normalized == zip_state_normalized or 
-                           user_state_normalized in zip_state_normalized or 
-                           zip_state_normalized in user_state_normalized)
-            
-            if not (city_matches and state_matches):
+        # Validate that the user is in a supported country
+        if not user_location.is_supported:
+            return jsonify({
+                'success': False, 
+                'error': f'Service not yet available in {user_location.country}. We\'re expanding globally!'
+            }), 400
+        
+        # Auto-fill city/state if not provided, or validate if provided
+        user_city = data.get('city', '').strip() or user_location.city
+        user_state = data.get('state', '').strip() or user_location.state
+        
+        # Validate city/state format (basic validation)
+        if user_city and len(user_city) < 2:
+            return jsonify({
+                'success': False,
+                'error': 'Please enter a valid city name'
+            }), 400
+        
+        if user_state and len(user_state) < 2:
+            return jsonify({
+                'success': False,
+                'error': 'Please enter a valid state/province'
+            }), 400
+        
+        # Check for suspicious patterns (bot protection)
+        suspicious_patterns = [
+            r'^[a-z]{10,}$',  # Long random strings
+            r'^[a-z]{2,}[0-9]{2,}[a-z]{2,}$',  # Mixed alphanumeric patterns
+            r'^[a-z]+[0-9]+[a-z]+$',  # Alternating letters and numbers
+            r'^[a-z]{5,}[0-9]{3,}$',  # Many letters followed by many numbers
+        ]
+        
+        import re
+        for pattern in suspicious_patterns:
+            if re.search(pattern, user_city, re.IGNORECASE) or re.search(pattern, user_state, re.IGNORECASE):
                 return jsonify({
                     'success': False,
-                    'error': f'City/State must match the ZIP code location: {location_info["city"]}, {location_info["state"]}'
+                    'error': 'Please enter valid city and state names'
                 }), 400
         
         # Validate email format
@@ -197,7 +256,7 @@ def signup():
         # Hash password
         password_hash = AuthUtils.hash_password(data['password'])
         
-        # Create user with location data
+        # Create user with detected location data
         user_data = {
             'email': data['email'],
             'password_hash': password_hash,
@@ -205,10 +264,15 @@ def signup():
             'phone': AuthUtils.format_phone(data['phone']),
             'user_type': data['user_type'],
             'zip_code': zip_code,
-            'city': location_info['city'],
-            'state': location_info['state'],
-            'latitude': location_info['coordinates']['latitude'],
-            'longitude': location_info['coordinates']['longitude']
+            'city': user_location.city,
+            'state': user_location.state,
+            'country': user_location.country,
+            'country_code': user_location.country_code,
+            'latitude': user_location.latitude,
+            'longitude': user_location.longitude,
+            'timezone': user_location.timezone,
+            'currency': user_location.currency,
+            'language': user_location.language_code
         }
         
         # Add address if provided
@@ -229,7 +293,15 @@ def signup():
             'message': 'User registered successfully',
             'data': {
                 **session,
-                'location': location_info['location']
+                'location': f"{user_location.city}, {user_location.state}, {user_location.country}",
+                'localization': {
+                    'currency': user_location.currency,
+                    'currency_symbol': user_location.currency_symbol,
+                    'language': user_location.language,
+                    'language_code': user_location.language_code,
+                    'timezone': user_location.timezone,
+                    'phone_code': user_location.phone_code
+                }
             }
         }), 201
         

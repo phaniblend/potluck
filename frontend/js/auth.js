@@ -39,21 +39,95 @@ function selectRole(role) {
     const signupBtn = document.getElementById('signupBtn');
     
     if (role === 'chef') {
-        // Chefs need ZIP field but no validation (they're expanding service)
-        zipValidationSection.style.display = 'none'; // Hide validation button
-        serviceStatusDiv.style.display = 'none';
-        signupBtn.disabled = false; // Enable immediately for chefs
-        zipValidated = true;
+        // Chefs are expanding service globally - auto-detect location
+        zipValidationSection.style.display = 'none';
+        serviceStatusDiv.style.display = 'block';
+        serviceStatusDiv.innerHTML = '🌍 Detecting your location...';
+        serviceStatusDiv.className = 'service-status validating';
+        
+        // Auto-detect location for chefs
+        detectUserLocation().then(locationData => {
+            if (locationData) {
+                signupBtn.disabled = false;
+                zipValidated = true;
+            }
+        });
     } else {
-        // Consumers and Delivery Agents need ZIP validation
-        zipValidationSection.style.display = 'block'; // Show validation button
-        serviceStatusDiv.style.display = 'none';
-        signupBtn.disabled = true; // Disable until ZIP is validated
-        zipValidated = false;
+        // Consumers and Delivery Agents - auto-detect location first
+        zipValidationSection.style.display = 'block';
+        serviceStatusDiv.style.display = 'block';
+        serviceStatusDiv.innerHTML = '🌍 Detecting your location...';
+        serviceStatusDiv.className = 'service-status validating';
+        
+        // Auto-detect location
+        detectUserLocation().then(locationData => {
+            if (locationData) {
+                signupBtn.disabled = false;
+                zipValidated = true;
+            }
+        });
     }
 }
 
-// Check if zip code is serviceable
+// Automatically detect user location
+async function detectUserLocation() {
+    try {
+        const url = `${API_URL}/auth/detect-location`;
+        console.log('Detecting user location...');
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({})
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const locationData = data.data;
+            console.log('Location detected:', locationData);
+            
+            // Auto-fill form fields
+            if (locationData.city) {
+                document.getElementById('signupCity').value = locationData.city;
+                document.getElementById('signupCity').classList.add('valid');
+            }
+            
+            if (locationData.state) {
+                document.getElementById('signupState').value = locationData.state;
+                document.getElementById('signupState').classList.add('valid');
+            }
+            
+            if (locationData.postal_code) {
+                document.getElementById('signupZip').value = locationData.postal_code;
+            }
+            
+            // Show location info
+            const statusDiv = document.getElementById('serviceStatus');
+            statusDiv.className = 'service-status available';
+            statusDiv.innerHTML = `🌍 Location detected: ${locationData.city}, ${locationData.state}, ${locationData.country}`;
+            statusDiv.style.display = 'block';
+            
+            // Enable signup button
+            zipValidated = true;
+            document.getElementById('signupBtn').disabled = false;
+            
+            // Store localization data
+            localStorage.setItem('userLocation', JSON.stringify(locationData));
+            
+            return locationData;
+        } else {
+            showError('Could not detect location automatically. Please fill in manually.');
+            return null;
+        }
+    } catch (error) {
+        console.error('Error detecting location:', error);
+        showError('Error detecting location. Please fill in manually.');
+        return null;
+    }
+}
+
+// Check if zip code is serviceable (fallback for manual entry)
 async function checkServiceArea() {
     const zip = document.getElementById('signupZip').value;
     if (!zip) {

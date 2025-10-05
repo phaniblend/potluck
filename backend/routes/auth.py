@@ -86,37 +86,35 @@ def validate_location():
 def detect_location():
     """Automatically detect user location and return localization data"""
     try:
-        data = request.json
+        # Get client IP
         client_ip = request.remote_addr
+        if client_ip in ['127.0.0.1', 'localhost']:
+            client_ip = '8.8.8.8'  # Use Google DNS for local testing
         
-        # Get location by IP address
+        # Detect location
         location_data = geolocation_service.get_location_by_ip(client_ip)
         
         if not location_data:
+            # Fallback to default location
             return jsonify({
-                'success': False,
-                'error': 'Could not detect location automatically'
-            }), 400
+                'success': True,
+                'location': {
+                    'city': 'Dallas',
+                    'state': 'TX',
+                    'country': 'United States',
+                    'currency': 'USD',
+                    'timezone': 'America/Chicago'
+                }
+            })
         
         return jsonify({
             'success': True,
-            'data': {
+            'location': {
                 'city': location_data.city,
                 'state': location_data.state,
                 'country': location_data.country,
-                'country_code': location_data.country_code,
-                'postal_code': location_data.postal_code,
-                'latitude': location_data.latitude,
-                'longitude': location_data.longitude,
-                'timezone': location_data.timezone,
                 'currency': location_data.currency,
-                'currency_symbol': location_data.currency_symbol,
-                'language': location_data.language,
-                'language_code': location_data.language_code,
-                'phone_code': location_data.phone_code,
-                'is_supported': location_data.is_supported,
-                'pricing_tier': geolocation_service.GLOBAL_LOCALIZATION.get(
-                    location_data.country_code, {}).get('pricing_tier', 'medium')
+                'timezone': location_data.timezone
             }
         })
         
@@ -125,7 +123,7 @@ def detect_location():
 
 @bp.route('/test', methods=['GET'])
 def test_auth():
-    """Test endpoint to verify auth routes are working"""
+    """Test auth endpoint"""
     return jsonify({
         'success': True,
         'message': 'Auth routes are working!',
@@ -164,192 +162,127 @@ def check_service_area():
 
 @bp.route('/signup', methods=['POST'])
 def signup():
-    """Register new user"""
+    """Register new user - Debug version"""
+    print("=== SIGNUP REQUEST START ===")
     try:
-        # Rate limiting
-        client_ip = request.remote_addr
-        if not check_rate_limit(client_ip):
-            return jsonify({
-                'success': False, 
-                'error': 'Too many signup attempts. Please try again in 5 minutes.'
-            }), 429
-        
         data = request.json
+        print(f"📝 Signup data received: {data}")
         
         # Validate required fields
         required = ['email', 'password', 'full_name', 'phone', 'user_type', 'zip_code']
         for field in required:
             if field not in data:
+                print(f"❌ Missing field: {field}")
                 return jsonify({'success': False, 'error': f'{field} is required'}), 400
+        
+        print("✅ All required fields present")
         
         # Validate user type
         if data['user_type'] not in ['consumer', 'chef', 'delivery']:
+            print(f"❌ Invalid user type: {data['user_type']}")
             return jsonify({'success': False, 'error': 'Invalid user type'}), 400
         
-        # Get user's location automatically (IP-based geolocation)
-        client_ip = request.remote_addr
-        print(f"Client IP: {client_ip}")  # Debug log
+        print(f"✅ Valid user type: {data['user_type']}")
         
-        try:
-            user_location = geolocation_service.get_location_by_ip(client_ip)
-            print(f"Location detected: {user_location}")  # Debug log
-        except Exception as e:
-            print(f"Geolocation error: {e}")  # Debug log
-            # Fallback to default location
-            user_location = geolocation_service.get_location_by_ip('8.8.8.8')
-        
-        if not user_location:
-            return jsonify({
-                'success': False, 
-                'error': 'Could not detect your location automatically. Please try again.'
-            }), 400
-        
-        # Use provided ZIP code if available, otherwise use detected postal code
-        zip_code = data.get('zip_code', '').strip() or user_location.postal_code
-        
-        # Validate that the user is in a supported country
-        if not user_location.is_supported:
-            return jsonify({
-                'success': False, 
-                'error': f'Service not yet available in {user_location.country}. We\'re expanding globally!'
-            }), 400
-        
-        # Auto-fill city/state if not provided, or validate if provided
-        user_city = data.get('city', '').strip() or user_location.city
-        user_state = data.get('state', '').strip() or user_location.state
-        
-        # Validate city/state format (basic validation)
-        if user_city and len(user_city) < 2:
-            return jsonify({
-                'success': False,
-                'error': 'Please enter a valid city name'
-            }), 400
-        
-        if user_state and len(user_state) < 2:
-            return jsonify({
-                'success': False,
-                'error': 'Please enter a valid state/province'
-            }), 400
-        
-        # Check for suspicious patterns (bot protection)
-        suspicious_patterns = [
-            r'^[a-z]{10,}$',  # Long random strings
-            r'^[a-z]{2,}[0-9]{2,}[a-z]{2,}$',  # Mixed alphanumeric patterns
-            r'^[a-z]+[0-9]+[a-z]+$',  # Alternating letters and numbers
-            r'^[a-z]{5,}[0-9]{3,}$',  # Many letters followed by many numbers
-        ]
-        
-        import re
-        for pattern in suspicious_patterns:
-            if re.search(pattern, user_city, re.IGNORECASE) or re.search(pattern, user_state, re.IGNORECASE):
-                return jsonify({
-                    'success': False,
-                    'error': 'Please enter valid city and state names'
-                }), 400
-        
-        # Validate email format
-        if not AuthUtils.validate_email(data['email']):
+        # Basic email validation
+        if '@' not in data['email'] or '.' not in data['email']:
+            print(f"❌ Invalid email: {data['email']}")
             return jsonify({'success': False, 'error': 'Invalid email format'}), 400
         
+        print(f"✅ Valid email: {data['email']}")
+        
         # Check if user exists
+        print("🔍 Checking if user exists...")
         try:
             existing_user = DatabaseHelper.get_user_by_email(data['email'])
             if existing_user:
+                print(f"❌ User already exists: {data['email']}")
                 return jsonify({'success': False, 'error': 'Email already registered'}), 400
+            print("✅ User does not exist, can proceed")
         except Exception as e:
-            print(f"Database error checking existing user: {e}")
-            # For now, allow registration if database check fails
-            pass
+            print(f"⚠️ Database check error (continuing): {e}")
         
-        # Validate password strength
-        try:
-            is_valid, msg = validate_password_strength(data['password'])
-            if not is_valid:
-                return jsonify({'success': False, 'error': msg}), 400
-        except Exception as e:
-            print(f"Password validation error: {e}")
-            # Basic password validation as fallback
-            if len(data['password']) < 8:
-                return jsonify({'success': False, 'error': 'Password must be at least 8 characters'}), 400
+        # Basic password validation
+        if len(data['password']) < 8:
+            print(f"❌ Password too short: {len(data['password'])} chars")
+            return jsonify({'success': False, 'error': 'Password must be at least 8 characters'}), 400
+        
+        print("✅ Password validation passed")
         
         # Hash password
+        print("🔐 Hashing password...")
         try:
             password_hash = AuthUtils.hash_password(data['password'])
+            print("✅ Password hashed successfully")
         except Exception as e:
-            print(f"Password hashing error: {e}")
+            print(f"❌ Password hashing error: {e}")
             return jsonify({'success': False, 'error': 'Error processing password'}), 500
         
-        # Create user with detected location data
+        # Create user data
         user_data = {
             'email': data['email'],
             'password_hash': password_hash,
             'full_name': data['full_name'],
-            'phone': AuthUtils.format_phone(data['phone']),
+            'phone': data['phone'],
             'user_type': data['user_type'],
-            'zip_code': zip_code,
-            'city': user_location.city,
-            'state': user_location.state,
-            'country': user_location.country,
-            'country_code': user_location.country_code,
-            'latitude': user_location.latitude,
-            'longitude': user_location.longitude,
-            'timezone': user_location.timezone,
-            'currency': user_location.currency,
-            'language': user_location.language_code
+            'zip_code': data['zip_code'],
+            'city': data.get('city', 'Dallas'),
+            'state': data.get('state', 'TX'),
+            'address': data.get('address', ''),
+            'latitude': 32.7767,
+            'longitude': -96.7970
         }
         
-        # Add address if provided
-        if data.get('address'):
-            user_data['address'] = data['address']
+        print(f"👤 User data prepared: {user_data['email']}")
         
-        # Set delivery radius for delivery agents
-        if data['user_type'] == 'delivery':
-            user_data['delivery_radius'] = 3  # 3km default for bicycle delivery
-        
-        # Create user
+        # Create user in database
+        print("💾 Creating user in database...")
         try:
             user_id = DatabaseHelper.create_user(user_data)
-            print(f"User created with ID: {user_id}")  # Debug log
+            print(f"✅ User created with ID: {user_id}")
         except Exception as e:
-            print(f"User creation error: {e}")
-            return jsonify({'success': False, 'error': 'Error creating user account'}), 500
+            print(f"❌ Database creation error: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'error': 'Database error creating user'}), 500
         
-        # Create session
+        if not user_id:
+            print("❌ User ID is None/False")
+            return jsonify({'success': False, 'error': 'Failed to create user account'}), 500
+        
+        # Generate session token
+        print("🎟️ Generating session token...")
         try:
-            session = SessionManager.create_session(user_id, data['user_type'], data['email'])
-            print(f"Session created: {session}")  # Debug log
+            token = AuthUtils.generate_token(user_id, data['user_type'], data['email'])
+            print("✅ Token generated successfully")
         except Exception as e:
-            print(f"Session creation error: {e}")
-            # Return success without session for now
-            session = {
-                'token': 'temp-token-' + str(user_id),
+            print(f"❌ Token generation error: {e}")
+            return jsonify({'success': False, 'error': 'Error generating session'}), 500
+        
+        print("🎉 Signup successful!")
+        print("=== SIGNUP REQUEST END ===")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Account created successfully! Welcome to Potluck!',
+            'data': {
+                'token': token,
                 'user': {
                     'id': user_id,
                     'email': data['email'],
                     'full_name': data['full_name'],
-                    'user_type': data['user_type']
+                    'user_type': data['user_type'],
+                    'location': f"{user_data['city']}, {user_data['state']}"
                 }
             }
-        
-        return jsonify({
-            'success': True,
-            'message': 'User registered successfully',
-            'data': {
-                **session,
-                'location': f"{user_location.city}, {user_location.state}, {user_location.country}",
-                'localization': {
-                    'currency': user_location.currency,
-                    'currency_symbol': user_location.currency_symbol,
-                    'language': user_location.language,
-                    'language_code': user_location.language_code,
-                    'timezone': user_location.timezone,
-                    'phone_code': user_location.phone_code
-                }
-            }
-        }), 201
+        })
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        print(f"💥 CRITICAL ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        print("=== SIGNUP REQUEST END (ERROR) ===")
+        return jsonify({'success': False, 'error': 'Error creating user account'}), 500
 
 @bp.route('/login', methods=['POST'])
 def login():
@@ -428,47 +361,29 @@ def verify_token():
         if not token:
             return jsonify({'success': False, 'error': 'No token provided'}), 401
         
-        is_valid, user_data = SessionManager.validate_session(token)
-        if not is_valid:
-            return jsonify({'success': False, 'error': 'Invalid token'}), 401
+        payload = AuthUtils.decode_token(token)
+        if not payload:
+            return jsonify({'success': False, 'error': 'Invalid or expired token'}), 401
+        
+        # Get fresh user data
+        user = DatabaseHelper.get_user_by_id(payload['user_id'])
+        if not user or not user['is_active']:
+            return jsonify({'success': False, 'error': 'User not found or inactive'}), 401
+        
+        user_data = {
+            'id': user['id'],
+            'email': user['email'],
+            'full_name': user['full_name'],
+            'user_type': user['user_type'],
+            'phone': user['phone'],
+            'profile_image': user['profile_image']
+        }
         
         return jsonify({
             'success': True,
             'valid': True,
             'user': user_data
         })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
 
-@bp.route('/check-service-area', methods=['POST'])
-def check_service_area():
-    """Check if a zip code is in service area"""
-    try:
-        data = request.json
-        zip_code = data.get('zip_code', '').strip()
-        
-        if not zip_code:
-            return jsonify({'success': False, 'error': 'Zip code required'}), 400
-        
-        location_info = location_service.get_local_market_info(zip_code)
-        
-        if not location_info.get('coordinates'):
-            return jsonify({
-                'success': False,
-                'serviceable': False,
-                'message': 'Service not available in your area yet'
-            })
-        
-        # Find nearby chefs
-        nearby_chefs = location_service.find_nearby_chefs(zip_code)
-        
-        return jsonify({
-            'success': True,
-            'serviceable': True,
-            'location': location_info,
-            'nearby_chefs_count': len(nearby_chefs),
-            'message': f"Great! We serve {location_info['location']} with {len(nearby_chefs)} chefs nearby"
-        })
-        
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

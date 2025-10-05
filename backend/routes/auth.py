@@ -219,6 +219,7 @@ def signup():
             return jsonify({'success': False, 'error': 'Error processing password'}), 500
         
         # Create user data
+        
         user_data = {
             'email': data['email'],
             'password_hash': password_hash,

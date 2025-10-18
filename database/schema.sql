@@ -261,6 +261,38 @@ CREATE TABLE IF NOT EXISTS chef_availability (
     FOREIGN KEY (chef_id) REFERENCES users(id)
 );
 
+-- Service areas for delivery agents
+CREATE TABLE IF NOT EXISTS service_areas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    delivery_agent_id INTEGER NOT NULL,
+    area_name TEXT NOT NULL, -- e.g., "Downtown Dallas", "Uptown"
+    zip_code TEXT NOT NULL,
+    city TEXT NOT NULL,
+    state TEXT NOT NULL,
+    country TEXT DEFAULT 'US',
+    latitude REAL,
+    longitude REAL,
+    is_primary BOOLEAN DEFAULT 0, -- Primary service area
+    is_active BOOLEAN DEFAULT 1,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (delivery_agent_id) REFERENCES users(id)
+);
+
+-- Delivery agent verification documents
+CREATE TABLE IF NOT EXISTS delivery_verification (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    delivery_agent_id INTEGER NOT NULL,
+    document_type TEXT NOT NULL, -- 'driving_license', 'id_card', 'selfie', 'vehicle_registration'
+    document_url TEXT NOT NULL,
+    verification_status TEXT DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+    verified_by INTEGER, -- admin user id
+    verified_at TIMESTAMP,
+    rejection_reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (delivery_agent_id) REFERENCES users(id),
+    FOREIGN KEY (verified_by) REFERENCES users(id)
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
@@ -272,3 +304,6 @@ CREATE INDEX IF NOT EXISTS idx_orders_chef ON orders(chef_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status);
 CREATE INDEX IF NOT EXISTS idx_messages_order ON messages(order_id);
 CREATE INDEX IF NOT EXISTS idx_delivery_tracking_order ON delivery_tracking(order_id);
+CREATE INDEX IF NOT EXISTS idx_service_areas_da ON service_areas(delivery_agent_id);
+CREATE INDEX IF NOT EXISTS idx_service_areas_zip ON service_areas(zip_code);
+CREATE INDEX IF NOT EXISTS idx_delivery_verification_da ON delivery_verification(delivery_agent_id);

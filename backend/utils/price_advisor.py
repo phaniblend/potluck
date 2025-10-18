@@ -15,9 +15,20 @@ class PriceAdvisor:
     """AI-powered pricing suggestions for home chefs"""
     
     def __init__(self):
-        self.client = anthropic.Anthropic(
-            api_key=os.getenv('ANTHROPIC_API_KEY', '')
-        )
+        api_key = os.getenv('ANTHROPIC_API_KEY', '')
+        self.has_api_key = bool(api_key and api_key != '')
+        
+        if self.has_api_key:
+            try:
+                self.client = anthropic.Anthropic(api_key=api_key)
+                print("✅ AI Price Advisor initialized with Anthropic API")
+            except Exception as e:
+                print(f"⚠️ Failed to initialize Anthropic client: {e}")
+                self.has_api_key = False
+                self.client = None
+        else:
+            print("ℹ️ AI Price Advisor running in fallback mode (no API key)")
+            self.client = None
     
     def get_price_suggestion(self, dish_data: Dict) -> Dict:
         """
@@ -83,6 +94,10 @@ class PriceAdvisor:
         }}
         
         Only respond with valid JSON, no other text."""
+        
+        # Use fallback if no API key
+        if not self.has_api_key or not self.client:
+            return self._fallback_pricing(dish_data)
         
         try:
             # Call Anthropic API

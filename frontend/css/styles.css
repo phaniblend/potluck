@@ -7,9 +7,10 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #f8f9fa;
     min-height: 100vh;
-    color: #333;
+    color: #bc2106;
+    line-height: 1.6;
 }
 
 .container {
@@ -110,8 +111,8 @@ body {
 }
 
 .form-input.validating {
-    border-color: #eb9d0e !important;
-    box-shadow: 0 0 0 2px rgba(235, 157, 14, 0.2);
+    border-color: #bc2106 !important;
+    box-shadow: 0 0 0 2px rgba(188, 33, 6, 0.2);
 }
 
 /* Validation feedback */
@@ -132,7 +133,7 @@ body {
 }
 
 .validation-feedback.validating {
-    color: #eb9d0e;
+    color: #bc2106;
 }
 
 /* Service status styles */
@@ -185,4 +186,222 @@ body {
     padding: 15px;
     border-radius: 10px;
     margin: 20px 0;
+}
+
+/* Price Rejection Modal */
+.price-rejection-modal {
+    max-width: 600px !important;
+    width: 95% !important;
+}
+
+.price-rejection-modal .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.rejection-info h3 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.premium-badge {
+    background: #bc2106;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.explanation {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 8px;
+    color: #856404;
+    line-height: 1.6;
+}
+
+.price-comparison {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 20px;
+    margin: 25px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.price-item {
+    text-align: center;
+    flex: 1;
+}
+
+.price-item label {
+    display: block;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.price-item .price {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.price-item.rejected .price {
+    color: #dc3545;
+}
+
+.price-item.recommended .price {
+    color: #28a745;
+}
+
+.badge-red {
+    background: #dc3545;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-green {
+    background: #28a745;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.arrow {
+    font-size: 2rem;
+    color: #666;
+}
+
+.cost-breakdown {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.cost-breakdown h4 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    color: #666;
+}
+
+.breakdown-item hr {
+    margin: 10px 0;
+    border: none;
+    border-top: 2px solid #e0e0e0;
+}
+
+.breakdown-item.total {
+    color: #333;
+    font-size: 1.1rem;
+    border-top: 2px solid #667eea;
+    padding-top: 15px;
+    margin-top: 10px;
+}
+
+.breakdown-item.max {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.ai-reasoning {
+    background: #e7f3ff;
+    border-left: 4px solid #667eea;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 8px;
+}
+
+.ai-reasoning h4 {
+    color: #667eea;
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
+.ai-reasoning p {
+    color: #555;
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.price-suggestions {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 8px;
+}
+
+.price-suggestions p {
+    color: #155724;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.btn-outline {
+    background: white;
+    border: 2px solid #667eea;
+    color: #667eea;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-outline:hover {
+    background: #667eea;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .price-comparison {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .arrow {
+        transform: rotate(90deg);
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+    }
 }

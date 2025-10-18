@@ -14,6 +14,7 @@ from config.database import DatabaseHelper, DatabaseConnection
 from utils.auth_utils import AuthUtils, SessionManager, validate_password_strength
 from utils.location import location_service
 from utils.geolocation import geolocation_service
+from utils.ai_translator import ai_translator
 
 # Simple in-memory rate limiting (in production, use Redis)
 rate_limit_store = defaultdict(list)
@@ -42,42 +43,108 @@ bp = Blueprint('auth', __name__)
 
 @bp.route('/validate-location', methods=['POST'])
 def validate_location():
-    """Validate city and state combination"""
+    """Validate location based on user type and chef availability"""
     try:
         data = request.json
         city = data.get('city', '').strip()
         state = data.get('state', '').strip()
+        user_type = data.get('user_type', 'consumer')
+        zip_code = data.get('zip_code', '').strip()
         
         if not city or not state:
             return jsonify({'valid': False, 'error': 'City and state are required'}), 400
         
-        # Check if this city/state combination exists in our service areas
-        valid_combinations = [
-            ('Dallas', 'TX'),
-            ('San Francisco', 'CA'),
-            ('New York', 'NY'),
-            ('Mumbai', 'MH'),
-            ('Delhi', 'DL'),
-            ('Bangalore', 'KA'),
-            ('Mexico City', 'CDMX'),
-            ('Guadalajara', 'JAL'),
-        ]
+        # CHEFS: Can signup anywhere - they CREATE service areas
+        if user_type == 'chef':
+            return jsonify({
+                'valid': True,
+                'message': 'Welcome Chef! You can start serving in this area.',
+                'is_new_service_area': True
+            })
         
-        # Normalize for comparison (case-insensitive)
-        city_normalized = city.lower().strip()
-        state_normalized = state.upper().strip()
-        
-        # Check if combination exists
-        is_valid = any(
-            city_normalized == valid_city.lower() and 
-            state_normalized == valid_state.upper()
-            for valid_city, valid_state in valid_combinations
-        )
-        
-        return jsonify({
-            'valid': is_valid,
-            'message': 'Location validated successfully' if is_valid else 'Location not in service area'
-        })
+        # For CONSUMERS and DELIVERY AGENTS: Check if chefs exist in the area
+        # Query database to find chefs in the area
+        try:
+            # Get chefs in this city/state
+            with DatabaseConnection.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT id, full_name, city, state, latitude, longitude, chef_specialties
+                    FROM users 
+                    WHERE user_type = 'chef' 
+                    AND is_active = 1
+                    AND city = ? AND state = ?
+                """, (city, state))
+                local_chefs = cursor.fetchall()
+                
+                # If no exact match, find nearest chefs
+                if not local_chefs:
+                    cursor.execute("""
+                        SELECT id, full_name, city, state, latitude, longitude, chef_specialties
+                        FROM users 
+                        WHERE user_type = 'chef' 
+                        AND is_active = 1
+                        LIMIT 5
+                    """)
+                    nearest_chefs = cursor.fetchall()
+                    
+                    if user_type == 'delivery':
+                        # DELIVERY AGENTS: Can signup and add service areas even without chefs
+                        # They can add service areas from their dashboard later
+                        return jsonify({
+                            'valid': True,
+                            'message': 'Location validated. You can add service areas from your dashboard after registration.',
+                            'user_type': 'delivery',
+                            'note': 'No chefs in this area yet, but you can still register and add service areas for future opportunities.'
+                        })
+                    else:
+                        # CONSUMERS: Can signup but show nearest chefs
+                        if nearest_chefs:
+                            chef_list = [{
+                                'name': chef['full_name'],
+                                'city': chef['city'],
+                                'state': chef['state'],
+                                'specialties': chef.get('chef_specialties', '[]')
+                            } for chef in nearest_chefs[:3]]
+                            
+                            return jsonify({
+                                'valid': True,
+                                'message': f'No chefs in {city}, {state} yet. Here are nearby chefs.',
+                                'warning': 'Delivery may not be available. You might need to pickup your order.',
+                                'nearest_chefs': chef_list,
+                                'has_local_chefs': False
+                            })
+                        else:
+                            return jsonify({
+                                'valid': True,
+                                'message': 'You can signup, but no chefs are available yet in your area.',
+                                'warning': 'Be the first to encourage chefs in your area!',
+                                'has_local_chefs': False
+                            })
+                else:
+                    # Chefs exist in the area
+                    chef_count = len(local_chefs)
+                    return jsonify({
+                        'valid': True,
+                        'message': f'Great! {chef_count} chef(s) are serving in {city}, {state}.',
+                        'has_local_chefs': True,
+                        'chef_count': chef_count
+                    })
+                    
+        except Exception as db_error:
+            print(f"Database error in location validation: {db_error}")
+            # Fallback to allowing signup
+            if user_type == 'chef':
+                return jsonify({
+                    'valid': True,
+                    'message': 'Welcome Chef! You can start serving in this area.'
+                })
+            else:
+                return jsonify({
+                    'valid': True,
+                    'message': 'Location validated',
+                    'warning': 'Could not verify chef availability. You can still signup.'
+                })
         
     except Exception as e:
         return jsonify({'valid': False, 'error': str(e)}), 500
@@ -116,6 +183,71 @@ def detect_location():
                 'currency': location_data.currency,
                 'timezone': location_data.timezone
             }
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/translate', methods=['POST'])
+def translate_text():
+    """Translate text to target language using AI"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        text = data.get('text', '')
+        target_language = data.get('target_language', 'en')
+        source_language = data.get('source_language', 'en')
+        
+        if not text:
+            return jsonify({'success': False, 'error': 'No text provided'}), 400
+        
+        if not target_language:
+            return jsonify({'success': False, 'error': 'No target language provided'}), 400
+        
+        # Translate the text
+        translated_text = ai_translator.translate_text(text, target_language, source_language)
+        
+        return jsonify({
+            'success': True,
+            'translation': translated_text,
+            'original_text': text,
+            'source_language': source_language,
+            'target_language': target_language
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/translate-batch', methods=['POST'])
+def translate_batch():
+    """Translate multiple texts at once"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        texts = data.get('texts', [])
+        target_language = data.get('target_language', 'en')
+        source_language = data.get('source_language', 'en')
+        
+        if not texts or not isinstance(texts, list):
+            return jsonify({'success': False, 'error': 'No texts provided or invalid format'}), 400
+        
+        if not target_language:
+            return jsonify({'success': False, 'error': 'No target language provided'}), 400
+        
+        # Translate the texts
+        translations = ai_translator.translate_batch(texts, target_language, source_language)
+        
+        return jsonify({
+            'success': True,
+            'translations': translations,
+            'source_language': source_language,
+            'target_language': target_language
         })
         
     except Exception as e:

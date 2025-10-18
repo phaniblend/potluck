@@ -1,0 +1,237 @@
+I see the issue! The file is `seed_data.py`, not `seed_test_data.py`. Let me check what files exist in the database directory and run the correct one:
+
+[1 tool called]
+
+Good! The file exists. The issue is you're trying to run it with a relative path. From the `potluck/database` directory, just run:
+
+```powershell
+python seed_test_data.py
+```
+
+Or from the project root (`E:\projects\PL-revamp`), run:
+
+```powershell
+python potluck/database/seed_test_data.py
+```
+
+Let me run it correctly for you:
+
+[1 tool called]
+
+Wait, there's something wrong with the Python path resolution. Let me check the seed_test_data.py file to see if it has the correct database path:
+
+[1 tool called]
+
+Perfect! Now I can see the issue. The script is looking for the database at the correct path. Let me run it from the project root:
+
+[1 tool called]
+
+PowerShell doesn't support `&&` the same way. Let me run it properly:
+
+[1 tool called]
+
+Perfect! 🎉 The database has been seeded successfully! Now let's update the test algorithm with the **actual test credentials** and add one more user in the **75080 ZIP code** (Richardson, TX) for better testing:
+
+[1 tool called]
+
+Great! Now here's your **updated step-by-step test algorithm** with the actual seeded data:
+
+---
+
+## 🧪 **Order-to-Delivery Flow Test Algorithm** (Updated with Seeded Data)
+
+### **✅ Database Already Seeded!**
+The database now has:
+- **9 users** (3 consumers, 3 chefs, 3 delivery agents)
+- **9 dishes** across 3 chefs
+- **3 existing orders** (1 delivered, 1 ready, 1 preparing)
+- **5 service areas** for delivery agents
+- All in **Dallas, TX** area (ZIP codes: 75201-75209)
+
+---
+
+### **Phase 1: Consumer Journey** 👤
+
+**Option A: Use Existing Consumer**
+1. **Login as Existing Consumer**
+   - Navigate to `http://localhost:5000`
+   - Click "Login"
+   - Credentials:
+     - Email: **john.doe@email.com**
+     - Password: **password123**
+     - Location: Dallas, TX **75201**
+
+**Option B: Register New Consumer in Richardson**
+1. **Register New Consumer**
+   - Navigate to `http://localhost:5000`
+   - Click "Sign Up"
+   - Fill in:
+     - Name: "Test Richardson User"
+     - Email: "test.richardson@email.com"
+     - Password: "password123"
+     - Role: **Consumer**
+     - ZIP: **75080** (Richardson, TX)
+   - Login with new credentials
+
+2. **Browse & Place Order**
+   - View available chefs
+   - **Expected**: See Maria Rodriguez (Mexican), Raj Patel (Indian), Anna Thompson (American)
+   - Click on a chef (e.g., **Maria Rodriguez**)
+   - Browse dishes:
+     - Chicken Tacos ($12.99)
+     - Beef Burrito ($15.99)
+     - Vegetarian Quesadilla ($10.99)
+   - Add dish to cart (e.g., **Chicken Tacos x2**)
+   - Click "Checkout"
+   - Select **Delivery**
+   - Confirm address (should auto-fill from profile)
+   - Place Order
+   - **Expected**: Order status = "pending"
+   - Note the **Order Number** (e.g., POT-20241018-1234)
+   - Logout
+
+---
+
+### **Phase 2: Chef Journey** 👨‍🍳
+
+3. **Login as Chef**
+   - Navigate to `http://localhost:5000`
+   - Login with:
+     - Email: **chef.maria@email.com**
+     - Password: **password123**
+     - Location: Dallas, TX **75204**
+
+4. **View & Accept Order**
+   - Go to Chef Dashboard
+   - View "Pending Orders" section
+   - **Expected**: See the order you just placed
+   - Click "View Details"
+   - Verify:
+     - Customer name
+     - Delivery address
+     - Items ordered
+     - Total amount
+   - Click **"Accept Order"**
+   - **Expected**: Order status changes to "accepted"
+
+5. **Prepare Order**
+   - Click **"Start Preparing"**
+   - **Expected**: Order status = "preparing"
+   - Wait a moment (simulate cooking)
+   - Click **"Mark as Ready"**
+   - **Expected**: Order status = "ready" (now visible to delivery agents)
+   - Logout
+
+---
+
+### **Phase 3: Delivery Agent Journey** 🚗
+
+6. **Login as Delivery Agent**
+   - Navigate to `http://localhost:5000`
+   - Login with:
+     - Email: **delivery.tom@email.com**
+     - Password: **password123**
+     - Location: Dallas, TX **75207**
+
+7. **Add Service Area** (if needed)
+   - Go to DA Dashboard
+   - Check "Service Areas" section
+   - **Expected**: Already has "Downtown Dallas (75201)" and "Uptown (75204)"
+   - If testing Richardson (75080), click **"Add Service Area"**:
+     - Area Name: "Richardson"
+     - Country: "United States"
+     - State: "Texas"
+     - City: "Richardson"
+     - ZIP: **75080**
+   - Click "Save"
+
+8. **View Available Jobs**
+   - Scroll to "Available Jobs" section
+   - **Expected**: See the "ready" order from Maria Rodriguez
+   - View details:
+     - **Pickup**: 321 Chef Lane, Dallas, TX 75204 (Maria's address)
+     - **Delivery**: Customer's address (from Phase 1)
+     - **Estimated Earnings**: ~$3.99 (delivery fee)
+     - **Distance**: Calculated distance
+   - Click **"Accept Job"**
+   - **Expected**: Order status = "out_for_delivery"
+
+9. **Complete Delivery**
+   - View "Active Deliveries" section
+   - Click **"Navigate to Pickup"** (opens map/navigation)
+   - Once "at" pickup location, click **"Mark Picked Up"**
+   - **Expected**: Status updates, shows delivery address
+   - Click **"Navigate to Customer"** (opens map/navigation)
+   - Once "at" delivery location, click **"Mark Delivered"**
+   - **Expected**: 
+     - Order status = "delivered"
+     - Earnings added: +$3.99
+     - Order moves to "Recent Deliveries"
+   - Logout
+
+---
+
+### **Phase 4: Verification** ✅
+
+10. **Verify as Consumer**
+    - Login as consumer (john.doe@email.com or your new user)
+    - View "Order History"
+    - **Expected**: Order shows as "Delivered"
+    - View order details
+    - (Optional) Rate the chef and delivery agent
+    - Logout
+
+11. **Verify as Chef**
+    - Login as chef (chef.maria@email.com)
+    - View "Completed Orders"
+    - **Expected**: Order shows as "delivered"
+    - Check "Earnings" section
+    - **Expected**: +$25.98 (or your order subtotal)
+    - Logout
+
+12. **Verify as DA**
+    - Login as DA (delivery.tom@email.com)
+    - View "Recent Deliveries"
+    - **Expected**: Completed delivery in history
+    - Check "Total Earnings"
+    - **Expected**: Previous earnings + $3.99
+    - Logout
+
+---
+
+### **Quick Test Credentials** 🔑
+
+| Role | Email | Password | Location |
+|------|-------|----------|----------|
+| **Consumer** | john.doe@email.com | password123 | Dallas, TX 75201 |
+| **Consumer** | sarah.wilson@email.com | password123 | Dallas, TX 75202 |
+| **Consumer** | mike.chen@email.com | password123 | Dallas, TX 75203 |
+| **Chef** | chef.maria@email.com | password123 | Dallas, TX 75204 |
+| **Chef** | chef.raj@email.com | password123 | Dallas, TX 75205 |
+| **Chef** | chef.anna@email.com | password123 | Dallas, TX 75206 |
+| **Delivery** | delivery.tom@email.com | password123 | Dallas, TX 75207 |
+| **Delivery** | delivery.lisa@email.com | password123 | Dallas, TX 75208 |
+| **Delivery** | delivery.venkat@email.com | password123 | Dallas, TX 75209 |
+
+---
+
+### **Expected Order Flow States** 📊
+
+```
+pending → accepted → preparing → ready → out_for_delivery → delivered
+```
+
+---
+
+### **Existing Test Orders** 📦
+
+The database already has 3 orders:
+1. **Delivered** - John Doe → Maria Rodriguez (delivered by Tom)
+2. **Ready** - Sarah Wilson → Raj Patel (waiting for delivery pickup)
+3. **Preparing** - Mike Chen → Anna Thompson (pickup order)
+
+You can test with order #2 (already "ready") to skip the chef acceptance step!
+
+---
+
+**Ready to test?** 🚀 The backend is running on `http://localhost:5000`. Start with Phase 1!

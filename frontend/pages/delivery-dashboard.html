@@ -1,1 +1,774 @@
-<!-- Delivery dashboard --> 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Potluck Dashboard</title>
+    <link rel="stylesheet" href="../css/styles.css?v=202510172340">
+    <link rel="stylesheet" href="../css/components.css?v=202510172340">
+    <link rel="stylesheet" href="../css/da-dashboard.css?v=202510172340">
+    <link rel="stylesheet" href="../css/responsive.css?v=202510172340">
+    <link rel="icon" type="image/x-icon" href="../favicon.ico">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="da-header">
+        <div class="da-header-content">
+            <div class="da-logo-section">
+                <div class="da-logo">
+                    <span class="da-logo-icon">🚚</span>
+                    <span class="da-logo-text">Potluck • Agent Console</span>
+                </div>
+                <div class="da-welcome">
+                    <span id="welcomeText">Welcome back, <span id="agentName">Venkat</span> — let's roll lightly.</span>
+                </div>
+            </div>
+            <div class="da-header-actions">
+                <div class="da-search">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" placeholder="Search order ID or address" class="search-input">
+                </div>
+                <div class="da-shift-toggle">
+                    <span class="shift-label">On shift</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="statusToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="language-selector" onclick="showLanguageModal()" style="cursor: pointer;">
+                    <span class="language-icon">🌐</span>
+                    <span id="currentLanguage">English</span>
+                    <span class="language-arrow">▼</span>
+                </div>
+                <button onclick="logout()" class="btn btn-outline logout-btn" data-i18n="logout">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="da-main">
+        <div class="da-container">
+            <!-- Summary Cards -->
+            <section class="da-summary-cards">
+                <div class="summary-card">
+                    <div class="summary-icon">📦</div>
+                    <div class="summary-content">
+                        <div class="summary-label">ACTIVE</div>
+                        <div class="summary-value" id="activeOrders">3</div>
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon">⏰</div>
+                    <div class="summary-content">
+                        <div class="summary-label">TODAY</div>
+                        <div class="summary-value" id="todayDrops">8 drops</div>
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon">💰</div>
+                    <div class="summary-content">
+                        <div class="summary-label">EARNINGS</div>
+                        <div class="summary-value" id="todayEarnings">$2,430</div>
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon">⭐</div>
+                    <div class="summary-content">
+                        <div class="summary-label">RATING</div>
+                        <div class="summary-value" id="agentRating">4.9</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Location & Service Areas Section -->
+            <section class="da-location-service-section">
+                <div class="section-header">
+                    <h2>Location & Service Areas</h2>
+                    <div class="section-actions">
+                        <button onclick="showManualLocationModal()" class="btn btn-outline btn-sm">
+                            <span class="btn-icon">📍</span>
+                            Update Location
+                        </button>
+                        <button onclick="showAddAreaModal()" class="btn btn-primary btn-sm">
+                            <span class="btn-icon">➕</span>
+                            Add Service Area
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="location-service-grid">
+                    <!-- Current Location Card -->
+                    <div class="location-card">
+                        <div class="card-header">
+                            <h3>Current Location</h3>
+                            <span class="location-status online">Online</span>
+                        </div>
+                        <div class="location-info">
+                            <div class="location-main">
+                                <span class="location-icon">📍</span>
+                                <span id="currentLocationDisplay">Detecting location...</span>
+                            </div>
+                            <div class="location-details">
+                                <div class="location-zip">
+                                    <strong>ZIP:</strong> <span id="currentZipCode">--</span>
+                                </div>
+                                <div class="location-coords">
+                                    <small id="locationCoords">--</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Service Areas Card -->
+                    <div class="service-areas-card">
+                        <div class="card-header">
+                            <h3>My Service Areas</h3>
+                            <span class="areas-count" id="serviceAreasCount">0 areas</span>
+                        </div>
+                        <div class="service-areas-list" id="serviceAreasList">
+                            <div class="empty-state">
+                                <span class="empty-icon">🗺️</span>
+                                <p>No service areas added yet</p>
+                                <button onclick="showAddAreaModal()" class="btn btn-primary btn-sm">Add Your First Area</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Active Orders Section -->
+            <section class="da-active-orders">
+                <div class="section-header">
+                    <h2>Active Orders</h2>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="priority">Priority</button>
+                        <button class="filter-btn" data-filter="nearby">Nearby</button>
+                    </div>
+                </div>
+                <div class="orders-list" id="activeOrdersList">
+                    <!-- Orders will be loaded here -->
+                </div>
+            </section>
+
+            <!-- This Week Earnings -->
+            <section class="da-earnings-section">
+                <div class="section-header">
+                    <h2>This week</h2>
+                    <div class="earnings-change positive">+12%</div>
+                </div>
+                <div class="earnings-content">
+                    <div class="earnings-amount" id="weekEarnings">$8,760</div>
+                    <div class="earnings-chart">
+                        <canvas id="earningsChart" width="400" height="100"></canvas>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modals -->
+
+    <!-- Manual Location Modal -->
+    <div id="manualLocationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="enter_location_manually">Enter Location Manually</h3>
+                <button onclick="closeManualLocationModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="manualCountry" data-i18n="country">Country</label>
+                    <input type="text" id="manualCountry" placeholder="Type country name (e.g., United States, India, Canada)" required>
+                    <small class="form-help" data-i18n="country_help">AI will help you find the correct country code</small>
+                </div>
+                <div class="form-group">
+                    <label for="manualState" data-i18n="state_province">State/Province</label>
+                    <input type="text" id="manualState" placeholder="Enter state or province" required>
+                </div>
+                <div class="form-group">
+                    <label for="manualCity" data-i18n="city">City</label>
+                    <input type="text" id="manualCity" placeholder="Enter city name" required>
+                </div>
+                <div class="form-group">
+                    <label for="manualPostalCode" data-i18n="postal_code">Postal Code</label>
+                    <input type="text" id="manualPostalCode" placeholder="Enter ZIP/PIN code" required>
+                    <small class="form-help" data-i18n="postal_code_help">Enter your ZIP code (US), PIN code (India), or postal code</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeManualLocationModal()" class="btn btn-outline" data-i18n="cancel">Cancel</button>
+                <button onclick="saveManualLocation()" class="btn btn-primary" data-i18n="save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Service Area Modal -->
+    <div id="addAreaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="add_service_area">Add Service Area</h3>
+                <button onclick="closeAddAreaModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="areaName" data-i18n="area_name">Area Name</label>
+                    <input type="text" id="areaName" placeholder="e.g., Downtown Dallas" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="areaCountry" data-i18n="country">Country</label>
+                    <input type="text" id="areaCountry" placeholder="Type country name (e.g., United States, India, Canada)" required>
+                    <small class="form-help" data-i18n="country_help">AI will help you find the correct country code</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="areaState" data-i18n="state_province">State/Province</label>
+                    <input type="text" id="areaState" placeholder="Enter state or province" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="areaCity" data-i18n="city">City</label>
+                    <input type="text" id="areaCity" placeholder="Enter city" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="areaZipCode" data-i18n="postal_code">Postal Code</label>
+                    <input type="text" id="areaZipCode" placeholder="Enter ZIP/PIN code" required>
+                    <small class="form-help" data-i18n="postal_code_help">Enter your ZIP code (US), PIN code (India), or postal code</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="isPrimaryArea">
+                        <span data-i18n="set_as_primary">Set as primary service area</span>
+                    </label>
+                </div>
+                
+                <!-- Action buttons inside scrollable area -->
+                <div class="modal-actions">
+                    <button onclick="closeAddAreaModal()" class="btn btn-outline" data-i18n="cancel">Cancel</button>
+                    <button onclick="console.log('Button clicked!'); saveServiceArea();" class="btn btn-primary" data-i18n="save">Save Service Area</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verification Modal -->
+    <div id="verificationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="verification_status">Verification Status</h3>
+                <button onclick="closeVerificationModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="verification-status">
+                    <div class="status-item">
+                        <span class="status-icon">🆔</span>
+                        <span class="status-text">ID Verification</span>
+                        <span class="status-badge pending">Pending</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon">🚗</span>
+                        <span class="status-text">Vehicle Registration</span>
+                        <span class="status-badge pending">Pending</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon">📸</span>
+                        <span class="status-text">Selfie Verification</span>
+                        <span class="status-badge pending">Pending</span>
+                    </div>
+                </div>
+                <div class="verification-actions">
+                    <button onclick="takeSelfie()" class="btn btn-primary" data-i18n="take_selfie">Take Selfie</button>
+                    <button onclick="uploadDocument()" class="btn btn-outline" data-i18n="upload_documents">Upload Documents</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Language Selection Modal -->
+    <div id="languageModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="select_language">Select Language</h3>
+                <span class="close-button" onclick="closeLanguageModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="language-grid">
+                    <div class="language-option" onclick="selectLanguage('en')" data-lang="en">
+                        <span class="flag">🇺🇸</span>
+                        <span class="lang-name">English</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('es')" data-lang="es">
+                        <span class="flag">🇪🇸</span>
+                        <span class="lang-name">Español</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('hi')" data-lang="hi">
+                        <span class="flag">🇮🇳</span>
+                        <span class="lang-name">हिन्दी</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('ta')" data-lang="ta">
+                        <span class="flag">🇮🇳</span>
+                        <span class="lang-name">தமிழ்</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('te')" data-lang="te">
+                        <span class="flag">🇮🇳</span>
+                        <span class="lang-name">తెలుగు</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('bn')" data-lang="bn">
+                        <span class="flag">🇧🇩</span>
+                        <span class="lang-name">বাংলা</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('zh')" data-lang="zh">
+                        <span class="flag">🇨🇳</span>
+                        <span class="lang-name">中文</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('ar')" data-lang="ar">
+                        <span class="flag">🇸🇦</span>
+                        <span class="lang-name">العربية</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('pt')" data-lang="pt">
+                        <span class="flag">🇧🇷</span>
+                        <span class="lang-name">Português</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('fr')" data-lang="fr">
+                        <span class="flag">🇫🇷</span>
+                        <span class="lang-name">Français</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('ru')" data-lang="ru">
+                        <span class="flag">🇷🇺</span>
+                        <span class="lang-name">Русский</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('id')" data-lang="id">
+                        <span class="flag">🇮🇩</span>
+                        <span class="lang-name">Bahasa Indonesia</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('de')" data-lang="de">
+                        <span class="flag">🇩🇪</span>
+                        <span class="lang-name">Deutsch</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('it')" data-lang="it">
+                        <span class="flag">🇮🇹</span>
+                        <span class="lang-name">Italiano</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('ja')" data-lang="ja">
+                        <span class="flag">🇯🇵</span>
+                        <span class="lang-name">日本語</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('ko')" data-lang="ko">
+                        <span class="flag">🇰🇷</span>
+                        <span class="lang-name">한국어</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('th')" data-lang="th">
+                        <span class="flag">🇹🇭</span>
+                        <span class="lang-name">ไทย</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('vi')" data-lang="vi">
+                        <span class="flag">🇻🇳</span>
+                        <span class="lang-name">Tiếng Việt</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('tl')" data-lang="tl">
+                        <span class="flag">🇵🇭</span>
+                        <span class="lang-name">Filipino</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('ms')" data-lang="ms">
+                        <span class="flag">🇲🇾</span>
+                        <span class="lang-name">Bahasa Melayu</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('so')" data-lang="so">
+                        <span class="flag">🇸🇴</span>
+                        <span class="lang-name">Soomaali</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('my')" data-lang="my">
+                        <span class="flag">🇲🇲</span>
+                        <span class="lang-name">မြန်မာ</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('sw')" data-lang="sw">
+                        <span class="flag">🇰🇪</span>
+                        <span class="lang-name">Kiswahili</span>
+                    </div>
+                    <div class="language-option" onclick="selectLanguage('am')" data-lang="am">
+                        <span class="flag">🇪🇹</span>
+                        <span class="lang-name">አማርኛ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Language Switch Modal -->
+    <div id="languageSwitchModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="language_switch_title">Language Switch</h3>
+                <span class="close-button" onclick="closeLanguageSwitchModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="languageSwitchMessage"></p>
+                <div class="language-options">
+                    <button id="switchToLocalLang" class="btn btn-primary" data-i18n="switch_to_local">Switch to Local Language</button>
+                    <button id="keepCurrentLang" class="btn btn-outline" data-i18n="keep_current">Keep Current Language</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/api.js?v=202510172340"></script>
+    <script src="../js/auth.js?v=202510172340"></script>
+    <script src="../js/utils.js?v=202510172340"></script>
+    <script src="../js/location.js?v=202510180050"></script>
+    <script src="../js/ai-translations.js?v=202510180110"></script>
+    <script src="../js/delivery.js?v=202510180110"></script>
+
+    <script>
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initAITranslations();
+            await initDeliveryDashboard();
+            loadActiveOrders();
+            loadEarningsChart();
+        });
+
+
+        // Manual location modal functions
+        function showManualLocationModal() {
+            document.getElementById('manualLocationModal').style.display = 'block';
+        }
+
+        function closeManualLocationModal() {
+            document.getElementById('manualLocationModal').style.display = 'none';
+        }
+
+        async function saveManualLocation() {
+            const countryName = document.getElementById('manualCountry').value;
+            const state = document.getElementById('manualState').value;
+            const city = document.getElementById('manualCity').value;
+            const postalCode = document.getElementById('manualPostalCode').value;
+            
+            if (!countryName || !state || !city || !postalCode) {
+                showToast('Please fill in all fields', 'error');
+                return;
+            }
+            
+            try {
+                // Use AI to get country code from country name
+                const countryCode = await getCountryCodeFromAI(countryName);
+                
+                const locationData = {
+                    city: city,
+                    state: state,
+                    country: countryCode,
+                    country_name: countryName,
+                    zip: postalCode,
+                    latitude: 32.7767, // Default coordinates - could be enhanced with geocoding
+                    longitude: -96.7970,
+                    full_address: `${city}, ${state}, ${countryName} ${postalCode}`
+                };
+                
+                localStorage.setItem('userLocation', JSON.stringify(locationData));
+                updateLocationDisplay();
+                closeManualLocationModal();
+                showToast('Location updated successfully!', 'success');
+                
+                // Prompt for language switch if available
+                if (typeof promptLanguageSwitch === 'function') {
+                    await promptLanguageSwitch(locationData);
+                }
+                
+            } catch (error) {
+                console.error('Manual location save error:', error);
+                showToast('Failed to save location: ' + error.message, 'error');
+            }
+        }
+
+        async function getCountryCodeFromAI(countryName) {
+            try {
+                const response = await fetch('/api/auth/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        text: `What is the ISO 3166-1 alpha-2 country code for "${countryName}"? Return only the 2-letter code (e.g., US, IN, CA, GB, AU).`,
+                        target_language: 'en'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const countryCode = data.translated_text?.trim().toUpperCase();
+                    
+                    // Validate that it's a 2-letter code
+                    if (countryCode && countryCode.length === 2 && /^[A-Z]{2}$/.test(countryCode)) {
+                        return countryCode;
+                    }
+                }
+                
+                // Fallback: try to match common country names
+                const commonCountries = {
+                    'united states': 'US', 'usa': 'US', 'america': 'US',
+                    'india': 'IN', 'bharat': 'IN',
+                    'canada': 'CA',
+                    'united kingdom': 'GB', 'uk': 'GB', 'britain': 'GB',
+                    'australia': 'AU',
+                    'germany': 'DE', 'deutschland': 'DE',
+                    'france': 'FR',
+                    'japan': 'JP',
+                    'brazil': 'BR', 'brasil': 'BR',
+                    'mexico': 'MX', 'méxico': 'MX',
+                    'spain': 'ES', 'españa': 'ES',
+                    'italy': 'IT', 'italia': 'IT',
+                    'china': 'CN',
+                    'russia': 'RU', 'россия': 'RU',
+                    'south africa': 'ZA',
+                    'nigeria': 'NG',
+                    'kenya': 'KE',
+                    'egypt': 'EG',
+                    'saudi arabia': 'SA',
+                    'united arab emirates': 'AE', 'uae': 'AE',
+                    'turkey': 'TR', 'türkiye': 'TR',
+                    'indonesia': 'ID',
+                    'thailand': 'TH',
+                    'vietnam': 'VN', 'việt nam': 'VN',
+                    'philippines': 'PH', 'filipinas': 'PH',
+                    'malaysia': 'MY',
+                    'singapore': 'SG',
+                    'south korea': 'KR', 'korea': 'KR',
+                    'taiwan': 'TW',
+                    'hong kong': 'HK',
+                    'new zealand': 'NZ',
+                    'argentina': 'AR',
+                    'chile': 'CL',
+                    'colombia': 'CO',
+                    'peru': 'PE', 'perú': 'PE',
+                    'venezuela': 'VE',
+                    'uruguay': 'UY',
+                    'paraguay': 'PY',
+                    'bolivia': 'BO',
+                    'ecuador': 'EC',
+                    'guyana': 'GY',
+                    'suriname': 'SR',
+                    'french guiana': 'GF'
+                };
+                
+                const normalizedName = countryName.toLowerCase().trim();
+                return commonCountries[normalizedName] || 'US'; // Default to US if not found
+                
+            } catch (error) {
+                console.error('AI country code detection failed:', error);
+                // Fallback to common countries
+                const commonCountries = {
+                    'united states': 'US', 'usa': 'US', 'america': 'US',
+                    'india': 'IN', 'bharat': 'IN',
+                    'canada': 'CA',
+                    'united kingdom': 'GB', 'uk': 'GB', 'britain': 'GB',
+                    'australia': 'AU'
+                };
+                const normalizedName = countryName.toLowerCase().trim();
+                return commonCountries[normalizedName] || 'US';
+            }
+        }
+
+        // Service area modal functions
+        function showAddAreaModal() {
+            document.getElementById('addAreaModal').style.display = 'block';
+        }
+
+        function closeAddAreaModal() {
+            document.getElementById('addAreaModal').style.display = 'none';
+        }
+
+        // Language modal functions
+        function showLanguageModal() {
+            document.getElementById('languageModal').style.display = 'block';
+        }
+
+        function closeLanguageModal() {
+            document.getElementById('languageModal').style.display = 'none';
+        }
+
+        async function selectLanguage(lang) {
+            if (typeof setLanguage === 'function') {
+                await setLanguage(lang, true);
+                closeLanguageModal();
+                showToast(`Language changed to ${lang}`, 'success');
+            } else {
+                console.error('setLanguage function not available');
+            }
+        }
+
+
+        // Verification modal functions
+        function showVerificationModal() {
+            document.getElementById('verificationModal').style.display = 'block';
+        }
+
+        function closeVerificationModal() {
+            document.getElementById('verificationModal').style.display = 'none';
+        }
+
+        function takeSelfie() {
+            showToast('Selfie feature coming soon!', 'info');
+        }
+
+        function uploadDocument() {
+            showToast('Document upload feature coming soon!', 'info');
+        }
+
+        // Load active orders
+        async function loadActiveOrders() {
+            const ordersList = document.getElementById('activeOrdersList');
+            
+            // Sample data - replace with actual API call
+            const sampleOrders = [
+                {
+                    id: 'PL-1284',
+                    customer: 'Sahana • Home Chef, Alwarpet',
+                    address: 'Akshara Residency, Teynampet',
+                    progress: 72,
+                    eta: 12,
+                    distance: 2.4
+                },
+                {
+                    id: 'PL-1285',
+                    customer: 'Rajesh • Street Food, Anna Nagar',
+                    address: 'Temple Towers, Mylapore',
+                    progress: 34,
+                    eta: 18,
+                    distance: 3.2
+                },
+                {
+                    id: 'PL-1289',
+                    customer: 'Priya • Restaurant, T. Nagar',
+                    address: 'Luxury Apartments, Adyar',
+                    progress: 88,
+                    eta: 8,
+                    distance: 1.8
+                }
+            ];
+            
+            ordersList.innerHTML = sampleOrders.map(order => `
+                <div class="order-card">
+                    <div class="order-header">
+                        <div class="order-id">${order.id}</div>
+                        <div class="order-customer">${order.customer}</div>
+                    </div>
+                    <div class="order-location">
+                        <span class="location-icon">📍</span>
+                        <span>${order.address}</span>
+                    </div>
+                    <div class="order-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${order.progress}%"></div>
+                        </div>
+                    </div>
+                    <div class="order-details">
+                        <span class="eta">ETA: ${order.eta} min • ${order.distance} km</span>
+                        <button class="view-route-btn">View route ></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load earnings chart
+        function loadEarningsChart() {
+            const canvas = document.getElementById('earningsChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Sample earnings data for the week
+            const earningsData = [1200, 1350, 1100, 1400, 1600, 1800, 1760];
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            
+            // Simple line chart
+            ctx.strokeStyle = '#2196F3';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            earningsData.forEach((value, index) => {
+                const x = (index * canvas.width) / (earningsData.length - 1);
+                const y = canvas.height - (value / 2000) * canvas.height;
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            
+            ctx.stroke();
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // Implement filtering logic here
+            });
+        });
+
+        // Status toggle
+        document.getElementById('statusToggle').addEventListener('change', function() {
+            const status = this.checked ? 'online' : 'offline';
+            showToast(`Status changed to ${status}`, 'info');
+            // Implement status change logic here
+        });
+
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 4px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                max-width: 300px;
+                word-wrap: break-word;
+            `;
+            
+            const colors = {
+                success: '#4CAF50',
+                error: '#f44336',
+                info: '#2196F3',
+                warning: '#bc2106'
+            };
+            toast.style.backgroundColor = colors[type] || colors.info;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }
+
+        // Make functions globally available
+        window.showLanguageModal = showLanguageModal;
+        window.closeLanguageModal = closeLanguageModal;
+        window.selectLanguage = selectLanguage;
+        window.showManualLocationModal = showManualLocationModal;
+        window.closeManualLocationModal = closeManualLocationModal;
+        window.saveManualLocation = saveManualLocation;
+        window.showAddAreaModal = showAddAreaModal;
+        window.closeAddAreaModal = closeAddAreaModal;
+        window.saveServiceArea = saveServiceArea;
+        window.showVerificationModal = showVerificationModal;
+        window.closeVerificationModal = closeVerificationModal;
+        window.takeSelfie = takeSelfie;
+        window.uploadDocument = uploadDocument;
+        window.showToast = showToast;
+    </script>
+</body>
+</html>

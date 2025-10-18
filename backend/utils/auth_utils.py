@@ -60,6 +60,11 @@ class AuthUtils:
             return None  # Invalid token
     
     @staticmethod
+    def verify_token(token: str) -> Optional[Dict]:
+        """Verify JWT token (alias for decode_token for backward compatibility)"""
+        return AuthUtils.decode_token(token)
+    
+    @staticmethod
     def extract_token_from_header() -> Optional[str]:
         """Extract token from Authorization header"""
         auth_header = request.headers.get('Authorization', '')

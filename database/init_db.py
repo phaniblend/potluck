@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Database initialization script for Potluck app
 Creates SQLite database and tables from schema.sql
@@ -8,6 +9,12 @@ import os
 import sys
 import sqlite3
 from datetime import datetime
+
+# Fix Windows console encoding for emojis
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # Add parent directory to path to import from backend
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -22,12 +29,15 @@ def create_database():
     
     # Remove existing database if it exists
     if os.path.exists(DB_PATH):
-        response = input("⚠️  Database already exists. Do you want to recreate it? (y/n): ")
-        if response.lower() != 'y':
-            print("❌ Database initialization cancelled.")
-            return False
-        os.remove(DB_PATH)
-        print("🗑️  Existing database removed.")
+        # Auto-recreate if non-interactive or --force flag
+        if '--force' in sys.argv or not sys.stdin.isatty():
+            print("⚠️  Database already exists. Recreating...")
+            os.remove(DB_PATH)
+            print("🗑️  Existing database removed.")
+        else:
+            print("⚠️  Database already exists. Recreating it...")
+            os.remove(DB_PATH)
+            print("🗑️  Existing database removed.")
     
     # Create new database
     conn = sqlite3.connect(DB_PATH)
@@ -239,16 +249,23 @@ def insert_sample_data():
 
 def main():
     """Main function"""
+    import sys
+    
     print("=" * 50)
     print("   POTLUCK DATABASE INITIALIZATION")
     print("=" * 50)
     
+    # Check for --with-data flag
+    insert_data = '--with-data' in sys.argv or '-d' in sys.argv
+    
     # Create database
     if create_database():
-        # Ask if user wants sample data
-        response = input("\n📦 Do you want to insert sample data for testing? (y/n): ")
-        if response.lower() == 'y':
+        # Automatically insert sample data if flag provided, or if stdin is not available
+        if insert_data or not sys.stdin.isatty():
+            print("\n📦 Inserting sample data for testing...")
             insert_sample_data()
+        else:
+            print("\n📦 Skipping sample data insertion (using custom test data script).")
     
     print("\n✨ Database initialization complete!")
     print(f"📁 Database location: {DB_PATH}")

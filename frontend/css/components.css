@@ -1,1 +1,547 @@
-/* Component styles */ 
+/* Component styles */
+
+/* Delivery Dashboard Styles */
+.location-status-section {
+    margin-bottom: 24px;
+}
+
+.location-card {
+    background: #ffffff;
+    color: #bc2106;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.location-info h3, .status-toggle-section h3 {
+    margin: 0 0 12px 0;
+    font-size: 1.2rem;
+}
+
+.location-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.location-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.location-icon {
+    font-size: 1.2rem;
+}
+
+.location-zip {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.status-toggle-section {
+    text-align: right;
+}
+
+.stats-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.status-info h3 {
+    margin: 0 0 12px 0;
+    font-size: 1.2rem;
+}
+
+.status-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: #4CAF50;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.status-stats {
+    display: flex;
+    gap: 32px;
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* Service Areas */
+.service-areas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.service-area-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.3s ease;
+}
+
+.service-area-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.service-area-card.primary {
+    border-color: #bc2106;
+    background: #fff5f5;
+}
+
+.area-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.area-header h4 {
+    margin: 0;
+    color: #333;
+}
+
+.area-badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.primary-badge {
+    background: #4CAF50;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.distance-badge {
+    background: #bc2106;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.area-details p {
+    margin: 4px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.area-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+/* Jobs */
+.jobs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.job-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.job-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.job-header h4 {
+    margin: 0;
+    color: #333;
+}
+
+.job-badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.job-distance {
+    background: #f0f0f0;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.job-earnings {
+    background: #4CAF50;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.chef-link {
+    color: #bc2106;
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.chef-link:hover {
+    text-decoration: underline;
+}
+
+.address-detail {
+    color: #666;
+    font-size: 0.9rem;
+    margin-left: 20px;
+}
+
+.job-filters {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.job-filters select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+}
+
+.job-details p {
+    margin: 6px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.job-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+/* Deliveries */
+.deliveries-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.delivery-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.delivery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.delivery-header h4 {
+    margin: 0;
+    color: #333;
+}
+
+.delivery-status {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.delivery-status.delivered {
+    background: #e8f5e8;
+    color: #4CAF50;
+}
+
+.delivery-status.cancelled {
+    background: #ffeaea;
+    color: #f44336;
+}
+
+.delivery-details p {
+    margin: 6px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Verification */
+.verification-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 24px;
+}
+
+.verification-card h3 {
+    margin: 0 0 16px 0;
+    color: #333;
+}
+
+.verification-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.verification-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.verification-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.verification-name {
+    font-weight: 500;
+    color: #333;
+}
+
+.verification-status {
+    font-size: 0.8rem;
+    padding: 2px 6px;
+    border-radius: 8px;
+}
+
+.verification-status.approved {
+    background: #e8f5e8;
+    color: #4CAF50;
+}
+
+.verification-status.rejected {
+    background: #ffeaea;
+    color: #f44336;
+}
+
+.verification-status.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.verification-icon {
+    font-size: 1.2rem;
+}
+
+/* Verification Modal */
+.verification-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.verification-step h4 {
+    margin: 0 0 12px 0;
+    color: #333;
+}
+
+.upload-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+    border-color: #4CAF50;
+    background: #f8fff8;
+}
+
+.upload-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.upload-icon {
+    font-size: 2rem;
+}
+
+.upload-content p {
+    margin: 0;
+    color: #666;
+}
+
+.camera-instructions {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f0f8ff;
+    border-radius: 6px;
+}
+
+.camera-instructions p {
+    margin: 0;
+    color: #0066cc;
+    font-size: 0.9rem;
+}
+
+/* Empty States */
+.empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    margin: 0 0 8px 0;
+    color: #333;
+}
+
+.empty-state p {
+    margin: 0 0 20px 0;
+    color: #666;
+}
+
+/* Section Headers */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-header h2 {
+    margin: 0;
+    color: #333;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .status-card {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+    }
+    
+    .status-stats {
+        justify-content: center;
+    }
+    
+    .service-areas-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .job-actions {
+        flex-direction: column;
+    }
+    
+    .area-actions {
+        flex-direction: column;
+    }
+} 

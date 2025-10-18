@@ -86,6 +86,14 @@ class DatabaseHelper:
     """Helper functions for common database operations"""
     
     @staticmethod
+    def get_user_by_id(user_id: int) -> Optional[Dict]:
+        """Get user by ID"""
+        return DatabaseConnection.execute_one(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,)
+        )
+    
+    @staticmethod
     def get_user_by_email(email: str) -> Optional[Dict]:
         """Get user by email"""
         return DatabaseConnection.execute_one(
@@ -99,14 +107,6 @@ class DatabaseHelper:
         return DatabaseConnection.execute_one(
             "SELECT * FROM users WHERE phone = ?",
             (phone,)
-        )
-    
-    @staticmethod
-    def get_user_by_id(user_id: int) -> Optional[Dict]:
-        """Get user by ID"""
-        return DatabaseConnection.execute_one(
-            "SELECT * FROM users WHERE id = ?",
-            (user_id,)
         )
     
     @staticmethod

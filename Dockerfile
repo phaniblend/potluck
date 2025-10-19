@@ -19,6 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Build SQLite database into the image with sample data
+RUN python database/init_db.py --with-data
+
 # Create necessary directories
 RUN mkdir -p /tmp/uploads /tmp/logs
 

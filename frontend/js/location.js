@@ -158,7 +158,8 @@ async function detectAndUpdateLocation() {
                 
                 // Fallback to backend detection
                 try {
-                    const response = await fetch('http://localhost:5000/api/auth/detect-location', {
+                    const base = (typeof API_URL!== 'undefined'? API_URL : (window.location.origin + '/api'));
+                    const response = await fetch(`${base}/auth/detect-location`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'

@@ -6,9 +6,9 @@
 // Use API_URL from auth.js (already declared globally)
 // If not available, define it on window object
 if (typeof API_URL === 'undefined') {
-    window.API_URL = 'http://localhost:5000/api';
+    window.API_URL = `${window.location.origin}/api`;
 }
-const CHEF_API_URL = window.API_URL || API_URL || 'http://localhost:5000/api';
+const CHEF_API_URL = window.API_URL || `${window.location.origin}/api`;
 const token = localStorage.getItem('token');
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 

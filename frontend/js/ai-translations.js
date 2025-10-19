@@ -23,7 +23,7 @@ async function translateText(text, targetLanguage = currentLang, sourceLanguage 
     }
     
     try {
-        const response = await fetch(`http://localhost:5000/api/auth/translate`, {
+        const response = await fetch(`${(typeof API_URL!== 'undefined'? API_URL : (window.location.origin + '/api'))}/auth/translate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -84,7 +84,7 @@ async function translateBatch(texts, targetLanguage = currentLang, sourceLanguag
     }
     
     try {
-        const response = await fetch(`http://localhost:5000/api/auth/translate-batch`, {
+        const response = await fetch(`${(typeof API_URL!== 'undefined'? API_URL : (window.location.origin + '/api'))}/auth/translate-batch`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

@@ -85,6 +85,15 @@ def index():
     except:
         return "Potluck API is running!"
 
+@app.route('/favicon.ico')
+def favicon():
+    """Serve the favicon to prevent 404s"""
+    try:
+        return send_from_directory('../favicon_io', 'favicon.ico')
+    except Exception:
+        # Fallback to root if needed
+        return send_from_directory('..', 'favicon.ico')
+
 @app.route('/api/health')
 def health_check():
     """API health check endpoint"""

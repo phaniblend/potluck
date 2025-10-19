@@ -1,7 +1,12 @@
 // Authentication JavaScript for Potluck
 
 // API Configuration
-const API_URL = 'http://localhost:5000/api';
+// Use environment-aware base URL (works both locally and in production)
+const API_URL = (typeof window !== 'undefined' && window.location && window.location.origin)
+    ? `${window.location.origin}/api`
+    : '/api';
+// Expose globally for other scripts
+window.API_URL = API_URL;
 
 // Centralized logout function for all user roles
 function logout() {

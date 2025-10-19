@@ -8,6 +8,7 @@ Creates SQLite database and tables from schema.sql
 import os
 import sys
 import sqlite3
+import bcrypt
 from datetime import datetime
 
 # Fix Windows console encoding for emojis
@@ -81,8 +82,7 @@ def insert_sample_data():
     
     try:
         # Sample users (password is 'password123' hashed with bcrypt)
-        # In production, we'll use proper bcrypt hashing
-        sample_password = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Lsv2hLlGeRLBrjCBa'
+        sample_password = bcrypt.hashpw('password123'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
         users_data = [
             # Consumers

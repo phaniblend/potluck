@@ -254,9 +254,10 @@ def recent_deliveries(user_id):
         conn = get_db_connection()
         
         cursor = conn.execute('''
-            SELECT o.id, o.delivery_address, o.pickup_address, o.order_status,
+            SELECT o.id, o.delivery_address, c.address as pickup_address, o.order_status,
                    o.delivered_at, e.amount as earnings
             FROM orders o
+            JOIN users c ON o.chef_id = c.id
             LEFT JOIN earnings e ON o.id = e.order_id AND e.type = 'delivery_fee'
             WHERE o.delivery_agent_id = ?
             AND o.order_status IN ('delivered', 'cancelled')
@@ -278,6 +279,48 @@ def recent_deliveries(user_id):
         conn.close()
         return jsonify({'deliveries': deliveries})
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/update-status/<int:order_id>', methods=['PUT'])
+@require_auth
+def update_order_status(user_id, order_id):
+    """DA updates order status to picked_up or delivered"""
+    try:
+        data = request.get_json(silent=True) or {}
+        new_status = data.get('status')
+        if new_status not in ['picked_up', 'delivered']:
+            return jsonify({'error': 'Invalid status'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.execute('SELECT delivery_agent_id, order_status FROM orders WHERE id = ?', (order_id,))
+        order = cursor.fetchone()
+        if not order:
+            conn.close()
+            return jsonify({'error': 'Order not found'}), 404
+        
+        # Ensure the order is assigned to this DA
+        if order['delivery_agent_id'] != user_id:
+            conn.close()
+            return jsonify({'error': 'Order not assigned to this delivery agent'}), 403
+        
+        now = datetime.utcnow().isoformat()
+        if new_status == 'picked_up':
+            conn.execute('''
+                UPDATE orders
+                SET order_status = 'picked_up', picked_up_at = ?
+                WHERE id = ?
+            ''', (now, order_id))
+        elif new_status == 'delivered':
+            conn.execute('''
+                UPDATE orders
+                SET order_status = 'delivered', delivered_at = ?
+                WHERE id = ?
+            ''', (now, order_id))
+        
+        conn.commit()
+        conn.close()
+        return jsonify({'message': 'Order status updated', 'status': new_status})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

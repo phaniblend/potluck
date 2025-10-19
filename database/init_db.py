@@ -86,21 +86,21 @@ def insert_sample_data():
         
         users_data = [
             # Consumers
-            ('john@example.com', '555-0101', sample_password, 'John Doe', 'consumer', 
+            ('john.doe@email.com', '555-0101', sample_password, 'John Doe', 'consumer', 
              '123 Main St', 'Dallas', 'TX', '75201', 32.7767, -96.7970),
-            ('jane@example.com', '555-0102', sample_password, 'Jane Smith', 'consumer',
+            ('jane.smith@email.com', '555-0102', sample_password, 'Jane Smith', 'consumer',
              '456 Oak Ave', 'Dallas', 'TX', '75202', 32.7831, -96.8067),
             
             # Chefs
-            ('maria@example.com', '555-0201', sample_password, 'Maria Rodriguez', 'chef',
+            ('maria.chef@email.com', '555-0201', sample_password, 'Maria Garcia', 'chef',
              '789 Chef Lane', 'Dallas', 'TX', '75203', 32.7459, -96.7838),
-            ('raj@example.com', '555-0202', sample_password, 'Raj Patel', 'chef',
+            ('raj.chef@email.com', '555-0202', sample_password, 'Raj Patel', 'chef',
              '321 Curry St', 'Dallas', 'TX', '75204', 32.8007, -96.7699),
             
             # Delivery Agents
-            ('mike@example.com', '555-0301', sample_password, 'Mike Wilson', 'delivery',
+            ('mike.driver@email.com', '555-0301', sample_password, 'Mike Wilson', 'delivery',
              '654 Driver Ave', 'Dallas', 'TX', '75205', 32.8137, -96.7943),
-            ('sarah@example.com', '555-0302', sample_password, 'Sarah Johnson', 'delivery',
+            ('sarah.driver@email.com', '555-0302', sample_password, 'Sarah Johnson', 'delivery',
              '987 Delivery Rd', 'Dallas', 'TX', '75206', 32.7700, -96.7643)
         ]
         
@@ -119,7 +119,7 @@ def insert_sample_data():
                 kitchen_type = 'home',
                 chef_rating = 4.8,
                 total_dishes_sold = 156
-            WHERE email = 'maria@example.com'
+            WHERE email = 'maria.chef@email.com'
         """)
         
         cursor.execute("""
@@ -129,7 +129,7 @@ def insert_sample_data():
                 kitchen_type = 'home',
                 chef_rating = 4.9,
                 total_dishes_sold = 203
-            WHERE email = 'raj@example.com'
+            WHERE email = 'raj.chef@email.com'
         """)
         
         # Update delivery-specific fields
@@ -141,7 +141,7 @@ def insert_sample_data():
                 current_status = 'online',
                 delivery_rating = 4.7,
                 total_deliveries = 89
-            WHERE email = 'mike@example.com'
+            WHERE email = 'mike.driver@email.com'
         """)
         
         cursor.execute("""
@@ -152,7 +152,7 @@ def insert_sample_data():
                 current_status = 'online',
                 delivery_rating = 4.9,
                 total_deliveries = 124
-            WHERE email = 'sarah@example.com'
+            WHERE email = 'sarah.driver@email.com'
         """)
         
         # Sample dishes for Maria (chef_id = 3)

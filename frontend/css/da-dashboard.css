@@ -9,7 +9,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f8f9fa;
+    background: #ffffff;
     color: #bc2106;
     line-height: 1.6;
 }
@@ -186,10 +186,13 @@ input:checked + .toggle-slider:before {
 
 .location-service-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 20px;
     margin-top: 20px;
 }
+
+/* Hide the current location card per design request */
+.location-card { display: none !important; }
 
 .location-card, .service-areas-card {
     background: #ffffff;

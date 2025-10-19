@@ -390,7 +390,7 @@ input:checked + .toggle-slider:before {
     justify-content: space-between;
     align-items: center;
     padding: 12px;
-    background: #f8f9fa;
+    background: #ffffff;
     border-radius: 6px;
 }
 

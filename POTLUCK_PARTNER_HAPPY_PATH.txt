@@ -1,0 +1,85 @@
+POTLUCK – PARTNER DEMO (Happy Path)
+
+Live URL
+- https://www.potluck.cafe
+
+Test Accounts (all passwords: password123)
+- Consumer: john.doe@email.com
+- Chef (Raj): raj.chef@email.com
+- Delivery Agent: mike.driver@email.com
+
+Seeded Data (for this flow)
+- Chef Raj Patel, Dallas 75204 (321 Curry St)
+- Consumer address to use: 123 Main St, Dallas, TX 75201
+- DA Mike has service areas; if the list is empty, add the two below (see Step 3)
+
+What you will demonstrate (5–10 minutes)
+1) Consumer places a delivery order
+2) Chef accepts with ETA and then marks Ready
+3) Delivery Agent accepts, picks up, and delivers
+4) Consumer verifies in Order History
+
+Step-by-Step Instructions
+
+1) Consumer – place a delivery order
+   - Visit https://www.potluck.cafe and log in as Consumer (john.doe@email.com).
+   - Browse dishes from Chef Raj (e.g., Vegetable Biryani) and add 1 item to the cart.
+   - Open the cart (top-right) → Proceed to Checkout.
+   - Delivery type: Delivery.
+   - Delivery address: 123 Main St, Dallas, TX 75201.
+   - Place Order and note the order number (POT-YYYYMMDD-####).
+   - Logout.
+
+2) Chef – accept with ETA, then mark Ready
+   - Log in as Chef Raj (raj.chef@email.com).
+   - Go to Orders → Pending; select the new order from John Doe.
+   - Click Accept and enter an ETA in minutes (e.g., 20). This also notifies nearby DAs.
+   - When you’re ready to continue, click Mark as Ready (order moves to Ready state).
+   - Logout.
+
+3) Delivery Agent – accept, pick up, deliver
+   - Log in as Delivery Agent (mike.driver@email.com).
+   - If My Service Areas is empty, add:
+     • Uptown – ZIP 75204 – Dallas, TX, US (set Primary)
+     • Downtown Dallas – ZIP 75201 – Dallas, TX, US
+   - Ensure On shift toggle is ON and click Refresh.
+   - Available Delivery Jobs: accept John Doe’s order (if Ready already, it may appear directly under Active Orders).
+   - In Active Orders:
+     • Mark as Picked Up (allowed only when the chef has marked Ready).
+     • Optionally click Navigate to Customer to open Google Maps.
+     • Mark as Delivered.
+   - Logout.
+
+4) Consumer – verify delivery
+   - Log in as Consumer again.
+   - Open Order History; confirm the order shows Delivered.
+   - (Optional) Rate the order.
+
+Gotchas / Tips to ensure a smooth demo
+- If Available Jobs shows none:
+  • Confirm the chef accepted with an ETA AND the order type was Delivery (not Pickup).
+  • Make sure the DA has service areas that include the chef/consumer ZIPs (75204 and 75201).
+  • Verify the DA On shift toggle is ON and click Refresh.
+- Status rules enforced by backend:
+  • DA can pick up only when order_status = ready.
+  • DA can deliver only after order_status = picked_up.
+- If UI looks stale or styles seem cached: hard refresh the page.
+- If you just switched users in the same browser and see odd behavior: logout, then hard refresh or use an incognito window (avoids token caching).
+
+What’s included in this MVP
+- Consumer: browse/search, cart/checkout, order history (ratings scaffold).
+- Chef: view/accept with ETA, preparing/ready status, notifications to DAs on accept.
+- Delivery Agent: service areas, available jobs (proximity sorting), active orders, pickup/delivery.
+- Distances and ETA calculation (Haversine), notifications for new delivery jobs.
+
+Planned nice-to-have additions (near-term roadmap)
+- In-app toast notifications everywhere (remove any remaining alerts), plus push notifications (mobile/PWA via FCM).
+- Payments and tips (Stripe), and automated payouts.
+- Rich menus (images, inventory windows, availability scheduling, variants/add-ons).
+- Improved reordering and favorites, recommendations by cuisine/preference.
+- DA navigation deep-links, route optimization, and batching.
+- Stronger localization: language/currency/region sync, better AI translations.
+- Admin/ops dashboards (moderation, support tooling, metrics).
+
+Contact
+- If any step doesn’t match the above, please hard refresh and repeat the step; we’re iterating quickly.

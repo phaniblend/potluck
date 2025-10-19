@@ -24,8 +24,18 @@ async function initConsumerDashboard() {
     
     try {
         // Check authentication
-        const user = await checkAuth();
-        if (!user || user.user_type !== 'consumer') {
+        const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+        
+        if (!token || !userStr) {
+            console.log('No auth token or user data, redirecting to login...');
+            window.location.href = '/';
+            return;
+        }
+        
+        const user = JSON.parse(userStr);
+        if (user.user_type !== 'consumer') {
+            console.log('User is not a consumer, redirecting...');
             window.location.href = '/';
             return;
         }
@@ -36,14 +46,18 @@ async function initConsumerDashboard() {
         document.getElementById('userName').textContent = user.full_name || 'User';
         document.getElementById('userLocation').textContent = `📍 ${user.location || 'Unknown'}`;
         
-        // Load data
-        await Promise.all([
-            loadDishes(),
-            loadActiveOrders(),
-            loadOrderHistory(),
-            loadFavorites(),
-            loadNotifications()
-        ]);
+        // Load data (with error handling to prevent infinite loops)
+        try {
+            await Promise.all([
+                loadDishes().catch(e => console.warn('Failed to load dishes:', e)),
+                loadActiveOrders().catch(e => console.warn('Failed to load orders:', e)),
+                loadOrderHistory().catch(e => console.warn('Failed to load history:', e)),
+                loadFavorites().catch(e => console.warn('Failed to load favorites:', e)),
+                loadNotifications().catch(e => console.warn('Failed to load notifications:', e))
+            ]);
+        } catch (error) {
+            console.warn('Some data failed to load:', error);
+        }
         
         // Load cart from localStorage
         loadCart();
@@ -54,7 +68,8 @@ async function initConsumerDashboard() {
         console.log('✅ Consumer dashboard initialized');
     } catch (error) {
         console.error('❌ Failed to initialize dashboard:', error);
-        showToast('Failed to load dashboard', 'error');
+        // Don't redirect on error, just show message
+        console.error('Dashboard initialization error:', error);
     }
 }
 
@@ -100,7 +115,26 @@ async function loadDishes() {
         
         if (response.ok) {
             const data = await response.json();
-            dishes = data.dishes || [];
+            dishes = (data.dishes || []).map(dish => {
+                // Parse JSON fields that come as strings from the database
+                try {
+                    if (typeof dish.dietary_tags === 'string') {
+                        dish.dietary_tags = JSON.parse(dish.dietary_tags || '[]');
+                    }
+                    if (typeof dish.ingredients === 'string') {
+                        dish.ingredients = JSON.parse(dish.ingredients || '[]');
+                    }
+                    if (typeof dish.allergens === 'string') {
+                        dish.allergens = JSON.parse(dish.allergens || '[]');
+                    }
+                } catch (e) {
+                    console.warn('Error parsing dish JSON fields:', e);
+                    dish.dietary_tags = dish.dietary_tags || [];
+                    dish.ingredients = dish.ingredients || [];
+                    dish.allergens = dish.allergens || [];
+                }
+                return dish;
+            });
             chefs = data.chefs || [];
             displayDishes(dishes);
             populateAreaFilter();
@@ -177,7 +211,9 @@ function displayDishes(dishesToDisplay) {
     
     grid.innerHTML = dishesToDisplay.map(dish => `
         <div class="dish-card" onclick="showDishDetails(${dish.id})">
-            <img src="${dish.image || '/images/placeholder-dish.jpg'}" alt="${dish.name}" class="dish-image" onerror="this.src='/images/placeholder-dish.jpg'">
+            <div class="dish-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 3rem; height: 200px;">
+                🍽️
+            </div>
             <div class="dish-content">
                 <div class="dish-header">
                     <div>
@@ -220,7 +256,9 @@ function showDishDetails(dishId) {
     
     modalBody.innerHTML = `
         <div class="dish-detail">
-            <img src="${dish.image || '/images/placeholder-dish.jpg'}" alt="${dish.name}" style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem;" onerror="this.src='/images/placeholder-dish.jpg'">
+            <div style="width: 100%; max-height: 300px; border-radius: 8px; margin-bottom: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 5rem; height: 300px;">
+                🍽️
+            </div>
             <h3>${dish.name}</h3>
             <div style="display: flex; gap: 1rem; margin: 1rem 0;">
                 <div class="dish-rating">⭐ ${dish.dish_rating || 4.5} (Dish)</div>
@@ -336,7 +374,9 @@ function updateCartUI() {
     
     cartItems.innerHTML = cart.map(item => `
         <div class="cart-item">
-            <img src="${item.dish.image || '/images/placeholder-dish.jpg'}" alt="${item.dish.name}" class="cart-item-image" onerror="this.src='/images/placeholder-dish.jpg'">
+            <div class="cart-item-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 2rem; min-width: 60px; height: 60px; border-radius: 8px;">
+                🍽️
+            </div>
             <div class="cart-item-details">
                 <div class="cart-item-name">${item.dish.name}</div>
                 <div class="cart-item-chef">by ${item.dish.chef_name}</div>
@@ -375,7 +415,7 @@ function proceedToCheckout() {
     const summaryDiv = document.getElementById('checkoutSummary');
     
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const deliveryFee = 3.99;
+    const deliveryFee = 0; // Default to pickup (no delivery fee)
     const tax = subtotal * 0.08;
     const total = subtotal + deliveryFee + tax;
     
@@ -390,7 +430,7 @@ function proceedToCheckout() {
             <hr>
             <div style="display: flex; justify-content: space-between;">
                 <span>Subtotal:</span>
-                <span>$${subtotal.toFixed(2)}</span>
+                <span id="subtotalAmount">$${subtotal.toFixed(2)}</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
                 <span>Delivery Fee:</span>
@@ -398,12 +438,12 @@ function proceedToCheckout() {
             </div>
             <div style="display: flex; justify-content: space-between;">
                 <span>Tax:</span>
-                <span>$${tax.toFixed(2)}</span>
+                <span id="taxAmount">$${tax.toFixed(2)}</span>
             </div>
             <hr>
             <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 600;">
                 <span>Total:</span>
-                <span>$${total.toFixed(2)}</span>
+                <span id="totalAmount">$${total.toFixed(2)}</span>
             </div>
         </div>
     `;
@@ -420,6 +460,13 @@ function updateDeliveryType() {
     const deliveryType = document.querySelector('input[name="deliveryType"]:checked').value;
     const addressGroup = document.getElementById('deliveryAddressGroup');
     const deliveryFeeAmount = document.getElementById('deliveryFeeAmount');
+    const totalAmount = document.getElementById('totalAmount');
+    
+    // Calculate subtotal
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const deliveryFee = deliveryType === 'delivery' ? 3.99 : 0;
+    const tax = subtotal * 0.08;
+    const total = subtotal + deliveryFee + tax;
     
     if (deliveryType === 'pickup') {
         addressGroup.style.display = 'none';
@@ -427,6 +474,11 @@ function updateDeliveryType() {
     } else {
         addressGroup.style.display = 'block';
         if (deliveryFeeAmount) deliveryFeeAmount.textContent = '$3.99';
+    }
+    
+    // Update the total display
+    if (totalAmount) {
+        totalAmount.textContent = `$${total.toFixed(2)}`;
     }
 }
 
@@ -469,6 +521,15 @@ async function placeOrder() {
     
     try {
         const token = localStorage.getItem('token');
+        console.log('Placing order with token:', token ? 'Token exists' : 'NO TOKEN');
+        console.log('Order data:', orderData);
+        
+        if (!token) {
+            showToast('Please login first', 'error');
+            window.location.href = '/';
+            return;
+        }
+        
         const response = await fetch(`${CONSUMER_API_URL}/consumer/orders`, {
             method: 'POST',
             headers: {
@@ -497,7 +558,8 @@ async function placeOrder() {
             switchTab('orders');
         } else {
             const error = await response.json();
-            showToast(error.message || 'Failed to place order', 'error');
+            console.error('Order placement failed:', response.status, error);
+            showToast(error.error || error.message || 'Failed to place order', 'error');
         }
     } catch (error) {
         console.error('Error placing order:', error);
@@ -619,30 +681,54 @@ function displayOrderHistory() {
 }
 
 async function reorder(orderId) {
+    console.log('Reorder called with orderId:', orderId);
+    console.log('Order history:', orderHistory);
     const order = orderHistory.find(o => o.id === orderId);
-    if (!order) return;
+    console.log('Found order:', order);
+    
+    if (!order) {
+        console.warn('Order not found');
+        showToast('Order not found', 'error');
+        return;
+    }
     
     // Clear current cart
     cart = [];
     
     // Add items from order to cart
-    const items = JSON.parse(order.items);
+    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+    console.log('Order items:', items);
+    
     for (const item of items) {
-        const dish = dishes.find(d => d.id === item.dish_id);
+        // Convert both to numbers for comparison
+        const dishId = parseInt(item.dish_id);
+        const dish = dishes.find(d => parseInt(d.id) === dishId);
+        console.log('Looking for dish:', item.dish_id, '(parsed:', dishId, ') Found:', dish);
+        console.log('Available dish IDs:', dishes.map(d => d.id));
         if (dish) {
             cart.push({
-                dish_id: item.dish_id,
+                dish_id: dish.id,
                 dish: dish,
-                quantity: item.quantity,
-                price: item.price
+                quantity: item.quantity || 1,
+                price: dish.price
             });
+        } else {
+            console.warn('Dish not found in current dishes list:', item.dish_id);
+            showToast(`Dish "${item.dish_name || 'Unknown'}" is no longer available`, 'warning');
         }
+    }
+    
+    console.log('Cart after reorder:', cart);
+    
+    if (cart.length === 0) {
+        showToast('None of the dishes from this order are currently available', 'warning');
+        return;
     }
     
     saveCart();
     updateCartUI();
-    showToast('Items added to cart!', 'success');
-    switchTab('browse');
+    showToast(`${cart.length} item(s) added to cart!`, 'success');
+    toggleCart(); // Open cart to show items
 }
 
 async function repeatLastOrder() {
@@ -654,6 +740,7 @@ async function repeatLastOrder() {
     const lastOrder = orderHistory[0];
     await reorder(lastOrder.id);
 }
+
 
 function formatStatus(status) {
     return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -675,6 +762,16 @@ async function toggleFavorite(dishId) {
 async function addFavorite(dishId) {
     try {
         const token = localStorage.getItem('token');
+        
+        if (!token) {
+            console.error('No auth token found');
+            showToast('Please log in to add favorites', 'error');
+            return;
+        }
+        
+        console.log('Adding favorite, dish ID:', dishId);
+        console.log('Token exists:', !!token);
+        
         const response = await fetch(`${CONSUMER_API_URL}/consumer/favorites`, {
             method: 'POST',
             headers: {
@@ -684,13 +781,23 @@ async function addFavorite(dishId) {
             body: JSON.stringify({ dish_id: dishId })
         });
         
+        console.log('Add favorite response:', response.status);
+        
         if (response.ok) {
-            favorites.push({ dish_id: dishId });
+            const data = await response.json();
+            console.log('Favorite added successfully:', data);
+            // Reload favorites to get complete data
+            await loadFavorites();
             displayDishes(dishes);
             showToast('Added to favorites!', 'success');
+        } else {
+            const error = await response.json();
+            console.error('Failed to add favorite:', error);
+            showToast(error.error || 'Failed to add favorite', 'error');
         }
     } catch (error) {
         console.error('Error adding favorite:', error);
+        showToast('Error adding favorite', 'error');
     }
 }
 
@@ -705,7 +812,8 @@ async function removeFavorite(dishId) {
         });
         
         if (response.ok) {
-            favorites = favorites.filter(f => f.dish_id !== dishId);
+            // Reload favorites to get updated data
+            await loadFavorites();
             displayDishes(dishes);
             showToast('Removed from favorites', 'success');
         }
@@ -717,6 +825,7 @@ async function removeFavorite(dishId) {
 async function loadFavorites() {
     try {
         const token = localStorage.getItem('token');
+        console.log('Loading favorites, token exists:', !!token);
         const response = await fetch(`${CONSUMER_API_URL}/consumer/favorites`, {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -725,7 +834,9 @@ async function loadFavorites() {
         
         if (response.ok) {
             const data = await response.json();
+            console.log('Favorites loaded:', data);
             favorites = data.favorites || [];
+            console.log('Favorites array:', favorites);
         }
     } catch (error) {
         console.error('Error loading favorites:', error);
@@ -733,8 +844,11 @@ async function loadFavorites() {
 }
 
 function showFavorites() {
-    switchTab('favorites');
+    console.log('showFavorites called');
+    console.log('Current favorites:', favorites);
+    console.log('Current dishes:', dishes);
     const favoriteDishes = dishes.filter(d => isFavorite(d.id));
+    console.log('Filtered favorite dishes:', favoriteDishes);
     const grid = document.getElementById('favoritesGrid');
     
     if (favoriteDishes.length === 0) {
@@ -744,7 +858,9 @@ function showFavorites() {
     
     grid.innerHTML = favoriteDishes.map(dish => `
         <div class="dish-card" onclick="showDishDetails(${dish.id})">
-            <img src="${dish.image || '/images/placeholder-dish.jpg'}" alt="${dish.name}" class="dish-image" onerror="this.src='/images/placeholder-dish.jpg'">
+            <div class="dish-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 3rem; height: 200px;">
+                🍽️
+            </div>
             <div class="dish-content">
                 <div class="dish-header">
                     <div>
@@ -936,6 +1052,11 @@ function switchTab(tabName) {
         activeTab.classList.add('active');
         activeTab.style.display = 'block';
     }
+    
+    // Load tab-specific data
+    if (tabName === 'favorites') {
+        showFavorites();
+    }
 }
 
 function toggleUserMenu() {
@@ -1061,29 +1182,37 @@ window.switchTab = switchTab;
 window.toggleCart = toggleCart;
 window.toggleNotifications = toggleNotifications;
 window.toggleUserMenu = toggleUserMenu;
+// Cart functions
 window.addToCart = addToCart;
+window.removeFromCart = removeFromCart;
 window.updateQuantity = updateQuantity;
 window.proceedToCheckout = proceedToCheckout;
 window.updateDeliveryType = updateDeliveryType;
 window.closeCheckoutModal = closeCheckoutModal;
 window.placeOrder = placeOrder;
+// Dish functions
 window.showDishDetails = showDishDetails;
 window.closeDishModal = closeDishModal;
 window.toggleFavorite = toggleFavorite;
 window.showFavorites = showFavorites;
+// Order functions
 window.repeatLastOrder = repeatLastOrder;
 window.reorder = reorder;
+window.viewOrderDetails = viewOrderDetails;
+// Rating functions
 window.showRatingModal = showRatingModal;
 window.closeRatingModal = closeRatingModal;
 window.setRating = setRating;
 window.setTip = setTip;
 window.submitRating = submitRating;
+// Search and filter
 window.searchDishes = searchDishes;
 window.filterDishes = filterDishes;
+// Notifications
 window.markNotificationRead = markNotificationRead;
+// User menu
 window.showProfile = showProfile;
 window.showSettings = showSettings;
 window.logout = logout;
-window.viewOrderDetails = viewOrderDetails;
 
 console.log('✅ consumer.js loaded successfully');

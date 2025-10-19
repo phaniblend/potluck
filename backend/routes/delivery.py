@@ -8,6 +8,7 @@ import sqlite3
 import os
 import base64
 from datetime import datetime, timedelta
+from middleware.auth import require_auth
 
 bp = Blueprint('delivery', __name__)
 
@@ -18,22 +19,9 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-def require_auth(f):
-    """Decorator to require authentication"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        token = request.headers.get('Authorization')
-        if not token or not token.startswith('Bearer '):
-            return jsonify({'error': 'Missing or invalid token'}), 401
-        
-        # In a real app, you'd verify the JWT token here
-        # For now, we'll just check if it exists
-        return f(*args, **kwargs)
-    return decorated_function
-
 @bp.route('/dashboard')
 @require_auth
-def dashboard():
+def dashboard(user_id):
     """Get delivery agent dashboard data"""
     try:
         conn = get_db_connection()
@@ -46,17 +34,17 @@ def dashboard():
             SELECT COUNT(*) as count, COALESCE(SUM(earnings.amount), 0) as earnings
             FROM orders 
             LEFT JOIN earnings ON orders.id = earnings.order_id AND earnings.type = 'delivery_fee'
-            WHERE delivery_agent_id = 1 -- This should be the actual user ID from token
+            WHERE delivery_agent_id = ?
             AND DATE(order_placed_at) = ?
             AND order_status = 'delivered'
-        ''', (today,))
+        ''', (user_id, today))
         
         delivery_data = deliveries_cursor.fetchone()
         
         # Get current status
         user_cursor = conn.execute('''
-            SELECT current_status FROM users WHERE id = 1
-        ''')
+            SELECT current_status FROM users WHERE id = ?
+        ''', (user_id,))
         user_data = user_cursor.fetchone()
         
         conn.close()
@@ -72,7 +60,7 @@ def dashboard():
 
 @bp.route('/service-areas', methods=['GET', 'POST'])
 @require_auth
-def service_areas():
+def service_areas(user_id):
     """Get or add service areas"""
     try:
         conn = get_db_connection()
@@ -81,10 +69,10 @@ def service_areas():
             # Get service areas
             cursor = conn.execute('''
                 SELECT * FROM service_areas 
-                WHERE delivery_agent_id = 1 -- This should be the actual user ID from token
+                WHERE delivery_agent_id = ?
                 AND is_active = 1
                 ORDER BY is_primary DESC, added_at DESC
-            ''')
+            ''', (user_id,))
             
             areas = []
             for row in cursor.fetchall():
@@ -114,8 +102,8 @@ def service_areas():
                 conn.execute('''
                     UPDATE service_areas 
                     SET is_primary = 0 
-                    WHERE delivery_agent_id = 1
-                ''')
+                    WHERE delivery_agent_id = ?
+                ''', (user_id,))
             
             # Insert new service area
             conn.execute('''
@@ -123,7 +111,7 @@ def service_areas():
                 (delivery_agent_id, area_name, zip_code, city, state, country, is_primary)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
-                1, # This should be the actual user ID from token
+                user_id,
                 data['area_name'],
                 data['zip_code'],
                 data['city'],
@@ -142,49 +130,97 @@ def service_areas():
 
 @bp.route('/available-jobs')
 @require_auth
-def available_jobs():
-    """Get available delivery jobs"""
+def available_jobs(user_id):
+    """Get available delivery jobs (orders that have been accepted by chef)"""
     try:
+        from datetime import datetime
+        from math import radians, sin, cos, sqrt, atan2
+        
         conn = get_db_connection()
+        
+        # Get delivery agent location
+        da_cursor = conn.execute('SELECT latitude, longitude, zip_code FROM users WHERE id = ?', (user_id,))
+        da_info = da_cursor.fetchone()
+        
+        if not da_info or not da_info['latitude'] or not da_info['longitude']:
+            conn.close()
+            return jsonify({'jobs': [], 'message': 'Please update your location first'})
+        
+        da_lat = da_info['latitude']
+        da_lon = da_info['longitude']
         
         # Get service areas for this delivery agent
         service_areas_cursor = conn.execute('''
             SELECT zip_code FROM service_areas 
-            WHERE delivery_agent_id = 1 AND is_active = 1
-        ''')
+            WHERE delivery_agent_id = ? AND is_active = 1
+        ''', (user_id,))
         service_zips = [row['zip_code'] for row in service_areas_cursor.fetchall()]
         
         if not service_zips:
             conn.close()
-            return jsonify({'jobs': []})
+            return jsonify({'jobs': [], 'message': 'Please add service areas first'})
         
-        # Get available jobs in service areas
-        # This is a simplified query - in reality, you'd have more complex matching
+        # Get available jobs - orders that are accepted/preparing/ready but not yet assigned
         cursor = conn.execute('''
-            SELECT o.id, o.delivery_address, o.pickup_address, o.total_amount,
-                   o.delivery_latitude, o.delivery_longitude,
+            SELECT o.id, o.order_number, o.delivery_address, o.total_amount,
+                   o.delivery_latitude, o.delivery_longitude, o.expected_ready_time,
+                   o.order_status,
                    c.full_name as chef_name, c.address as chef_address,
-                   c.latitude as chef_latitude, c.longitude as chef_longitude
+                   c.latitude as chef_latitude, c.longitude as chef_longitude,
+                   c.zip_code as chef_zip,
+                   consumer.full_name as consumer_name,
+                   consumer.latitude as consumer_lat, consumer.longitude as consumer_lon
             FROM orders o
             JOIN users c ON o.chef_id = c.id
-            WHERE o.order_status = 'ready'
+            JOIN users consumer ON o.consumer_id = consumer.id
+            WHERE o.order_status IN ('accepted', 'preparing', 'ready')
             AND o.delivery_agent_id IS NULL
             AND o.delivery_type = 'delivery'
-            AND (o.delivery_address LIKE '%' || ? || '%' OR ? IN (
-                SELECT zip_code FROM service_areas 
-                WHERE delivery_agent_id = 1 AND is_active = 1
-            ))
+            AND c.zip_code IN ({})
             ORDER BY o.order_placed_at ASC
-            LIMIT 10
-        ''', (service_zips[0], service_zips[0]))
+            LIMIT 20
+        '''.format(','.join('?' * len(service_zips))), service_zips)
+        
+        # Helper function to calculate distance (Haversine)
+        def calculate_distance(lat1, lon1, lat2, lon2):
+            R = 3959  # Earth's radius in miles
+            lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+            c = 2 * atan2(sqrt(a), sqrt(1-a))
+            return R * c
         
         jobs = []
         for row in cursor.fetchall():
-            # Calculate estimated earnings (simplified)
-            estimated_earnings = max(5.0, row['total_amount'] * 0.1)  # 10% of order value, min $5
+            # Calculate distances
+            da_to_chef_distance = calculate_distance(da_lat, da_lon, row['chef_latitude'], row['chef_longitude'])
+            chef_to_consumer_distance = calculate_distance(
+                row['chef_latitude'], row['chef_longitude'],
+                row['consumer_lat'], row['consumer_lon']
+            )
+            
+            # Calculate estimated earnings
+            base_fee = 3.99
+            distance_fee = chef_to_consumer_distance * 0.50  # $0.50 per mile
+            estimated_earnings = round(base_fee + distance_fee, 2)
+            
+            # Calculate ETA (minutes until ready)
+            eta_minutes = None
+            status_text = row['order_status'].capitalize()
+            if row['expected_ready_time']:
+                try:
+                    ready_time = datetime.fromisoformat(row['expected_ready_time'])
+                    now = datetime.now()
+                    time_diff = (ready_time - now).total_seconds() / 60
+                    eta_minutes = max(0, int(time_diff))
+                    status_text = f"Ready in ~{eta_minutes} min"
+                except:
+                    pass
             
             jobs.append({
                 'id': row['id'],
+                'order_number': row['order_number'],
                 'pickup_address': row['chef_address'],
                 'delivery_address': row['delivery_address'],
                 'pickup_latitude': row['chef_latitude'],
@@ -192,20 +228,27 @@ def available_jobs():
                 'delivery_latitude': row['delivery_latitude'],
                 'delivery_longitude': row['delivery_longitude'],
                 'chef_name': row['chef_name'],
-                'estimated_earnings': round(estimated_earnings, 2),
-                'estimated_time': 30,  # Simplified
-                'distance': 5.2  # Simplified - will be calculated on frontend
+                'consumer_name': row['consumer_name'],
+                'estimated_earnings': estimated_earnings,
+                'da_to_chef_distance': round(da_to_chef_distance, 1),
+                'chef_to_consumer_distance': round(chef_to_consumer_distance, 1),
+                'eta_minutes': eta_minutes,
+                'order_status': row['order_status'],
+                'status_text': status_text
             })
         
         conn.close()
         return jsonify({'jobs': jobs})
         
     except Exception as e:
+        print(f"Error fetching available jobs: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/recent-deliveries')
 @require_auth
-def recent_deliveries():
+def recent_deliveries(user_id):
     """Get recent deliveries"""
     try:
         conn = get_db_connection()
@@ -215,11 +258,11 @@ def recent_deliveries():
                    o.delivered_at, e.amount as earnings
             FROM orders o
             LEFT JOIN earnings e ON o.id = e.order_id AND e.type = 'delivery_fee'
-            WHERE o.delivery_agent_id = 1
+            WHERE o.delivery_agent_id = ?
             AND o.order_status IN ('delivered', 'cancelled')
             ORDER BY o.delivered_at DESC
             LIMIT 10
-        ''')
+        ''', (user_id,))
         
         deliveries = []
         for row in cursor.fetchall():
@@ -240,7 +283,7 @@ def recent_deliveries():
 
 @bp.route('/verification-status')
 @require_auth
-def verification_status():
+def verification_status(user_id):
     """Get verification status"""
     try:
         conn = get_db_connection()
@@ -248,9 +291,9 @@ def verification_status():
         cursor = conn.execute('''
             SELECT document_type, verification_status
             FROM delivery_verification
-            WHERE delivery_agent_id = 1
+            WHERE delivery_agent_id = ?
             ORDER BY created_at DESC
-        ''')
+        ''', (user_id,))
         
         status = {}
         for row in cursor.fetchall():
@@ -264,7 +307,7 @@ def verification_status():
 
 @bp.route('/verification', methods=['POST'])
 @require_auth
-def submit_verification():
+def submit_verification(user_id):
     """Submit verification documents"""
     try:
         # In a real app, you'd save the files to a secure location
@@ -281,7 +324,7 @@ def submit_verification():
                 INSERT INTO delivery_verification 
                 (delivery_agent_id, document_type, document_url, verification_status)
                 VALUES (?, ?, ?, ?)
-            ''', (1, 'driving_license', 'saved_file_path', 'pending'))
+            ''', (user_id, 'driving_license', 'saved_file_path', 'pending'))
         
         if 'vehicle_registration' in files:
             # Save vehicle registration
@@ -289,7 +332,7 @@ def submit_verification():
                 INSERT INTO delivery_verification 
                 (delivery_agent_id, document_type, document_url, verification_status)
                 VALUES (?, ?, ?, ?)
-            ''', (1, 'vehicle_registration', 'saved_file_path', 'pending'))
+            ''', (user_id, 'vehicle_registration', 'saved_file_path', 'pending'))
         
         # Handle selfie (base64 data)
         if 'selfie' in request.form:
@@ -297,7 +340,7 @@ def submit_verification():
                 INSERT INTO delivery_verification 
                 (delivery_agent_id, document_type, document_url, verification_status)
                 VALUES (?, ?, ?, ?)
-            ''', (1, 'selfie', 'saved_selfie_path', 'pending'))
+            ''', (user_id, 'selfie', 'saved_selfie_path', 'pending'))
         
         conn.commit()
         conn.close()
@@ -309,7 +352,7 @@ def submit_verification():
 
 @bp.route('/status', methods=['POST'])
 @require_auth
-def update_status():
+def update_status(user_id):
     """Update delivery agent status"""
     try:
         data = request.get_json()
@@ -321,9 +364,9 @@ def update_status():
         conn = get_db_connection()
         conn.execute('''
             UPDATE users 
-            SET current_status = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = 1
-        ''', (new_status,))
+            SET current_status = ?
+            WHERE id = ?
+        ''', (new_status, user_id))
         
         conn.commit()
         conn.close()
@@ -331,4 +374,180 @@ def update_status():
         return jsonify({'message': 'Status updated successfully'})
         
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/accept-job/<int:order_id>', methods=['POST'])
+@require_auth
+def accept_job(user_id, order_id):
+    """Accept a delivery job"""
+    try:
+        conn = get_db_connection()
+        
+        # Check if order exists and is available
+        cursor = conn.execute('''
+            SELECT id, order_status, delivery_agent_id, chef_id, consumer_id
+            FROM orders 
+            WHERE id = ? AND delivery_type = 'delivery'
+        ''', (order_id,))
+        order = cursor.fetchone()
+        
+        if not order:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found'}), 404
+        
+        if order['delivery_agent_id'] is not None:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order already assigned'}), 400
+        
+        if order['order_status'] not in ['accepted', 'preparing', 'ready']:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not available for pickup'}), 400
+        
+        # Assign delivery agent to order
+        conn.execute('''
+            UPDATE orders 
+            SET delivery_agent_id = ?
+            WHERE id = ?
+        ''', (user_id, order_id))
+        
+        # Create notification for chef
+        conn.execute('''
+            INSERT INTO notifications (user_id, type, title, message, related_id)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            order['chef_id'],
+            'delivery_assigned',
+            'Delivery Agent Assigned',
+            f'A delivery agent has been assigned to order #{order_id}',
+            order_id
+        ))
+        
+        # Create notification for consumer
+        conn.execute('''
+            INSERT INTO notifications (user_id, type, title, message, related_id)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            order['consumer_id'],
+            'delivery_assigned',
+            'Delivery Agent On The Way',
+            f'Your order #{order_id} has been assigned to a delivery agent',
+            order_id
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Job accepted successfully'
+        })
+        
+    except Exception as e:
+        print(f"Accept job error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/active-orders')
+@require_auth
+def active_orders(user_id):
+    """Get active orders assigned to this delivery agent"""
+    try:
+        from math import radians, sin, cos, sqrt, atan2
+        
+        conn = get_db_connection()
+        
+        # Get delivery agent location
+        da_cursor = conn.execute('SELECT latitude, longitude FROM users WHERE id = ?', (user_id,))
+        da_info = da_cursor.fetchone()
+        
+        if not da_info or not da_info['latitude'] or not da_info['longitude']:
+            conn.close()
+            return jsonify({'orders': []})
+        
+        da_lat = da_info['latitude']
+        da_lon = da_info['longitude']
+        
+        # Get active orders assigned to this DA
+        cursor = conn.execute('''
+            SELECT o.id, o.order_number, o.delivery_address, o.total_amount,
+                   o.delivery_latitude, o.delivery_longitude, o.expected_ready_time,
+                   o.order_status, o.order_placed_at,
+                   c.full_name as chef_name, c.address as chef_address,
+                   c.latitude as chef_latitude, c.longitude as chef_longitude,
+                   c.phone as chef_phone,
+                   consumer.full_name as consumer_name, consumer.phone as consumer_phone,
+                   consumer.latitude as consumer_lat, consumer.longitude as consumer_lon
+            FROM orders o
+            JOIN users c ON o.chef_id = c.id
+            JOIN users consumer ON o.consumer_id = consumer.id
+            WHERE o.delivery_agent_id = ?
+            AND o.order_status NOT IN ('delivered', 'cancelled')
+            ORDER BY o.order_placed_at ASC
+        ''', (user_id,))
+        
+        # Helper function to calculate distance (Haversine)
+        def calculate_distance(lat1, lon1, lat2, lon2):
+            R = 3959  # Earth's radius in miles
+            lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+            c = 2 * atan2(sqrt(a), sqrt(1-a))
+            return R * c
+        
+        orders = []
+        for row in cursor.fetchall():
+            # Calculate distances
+            da_to_chef_distance = round(calculate_distance(
+                da_lat, da_lon,
+                row['chef_latitude'], row['chef_longitude']
+            ), 2)
+            
+            chef_to_consumer_distance = round(calculate_distance(
+                row['chef_latitude'], row['chef_longitude'],
+                row['consumer_lat'], row['consumer_lon']
+            ), 2)
+            
+            # Calculate ETA
+            eta_minutes = None
+            status_text = row['order_status'].replace('_', ' ').title()
+            if row['expected_ready_time']:
+                from datetime import datetime
+                ready_time = datetime.fromisoformat(row['expected_ready_time'])
+                now = datetime.now()
+                if ready_time > now:
+                    eta_minutes = int((ready_time - now).total_seconds() / 60)
+                    status_text = f"{status_text} (Ready in {eta_minutes} min)"
+                else:
+                    status_text = f"{status_text} (Ready now!)"
+            
+            orders.append({
+                'id': row['id'],
+                'order_number': row['order_number'],
+                'chef_name': row['chef_name'],
+                'chef_address': row['chef_address'],
+                'chef_phone': row['chef_phone'],
+                'chef_latitude': row['chef_latitude'],
+                'chef_longitude': row['chef_longitude'],
+                'consumer_name': row['consumer_name'],
+                'consumer_phone': row['consumer_phone'],
+                'delivery_address': row['delivery_address'],
+                'delivery_latitude': row['delivery_latitude'],
+                'delivery_longitude': row['delivery_longitude'],
+                'order_status': row['order_status'],
+                'status_text': status_text,
+                'da_to_chef_distance': da_to_chef_distance,
+                'chef_to_consumer_distance': chef_to_consumer_distance,
+                'eta_minutes': eta_minutes,
+                'total_amount': row['total_amount']
+            })
+        
+        conn.close()
+        return jsonify({'orders': orders})
+        
+    except Exception as e:
+        print(f"Error fetching active orders: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500

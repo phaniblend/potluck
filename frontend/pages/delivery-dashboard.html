@@ -7,10 +7,10 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Potluck Dashboard</title>
-    <link rel="stylesheet" href="../css/styles.css?v=202510172340">
-    <link rel="stylesheet" href="../css/components.css?v=202510172340">
-    <link rel="stylesheet" href="../css/da-dashboard.css?v=202510172340">
-    <link rel="stylesheet" href="../css/responsive.css?v=202510172340">
+    <link rel="stylesheet" href="../css/styles.css?v=202510190235_ETA">
+    <link rel="stylesheet" href="../css/components.css?v=202510190235_ETA">
+    <link rel="stylesheet" href="../css/da-dashboard.css?v=202510190235_ETA">
+    <link rel="stylesheet" href="../css/responsive.css?v=202510190235_ETA">
     <link rel="icon" type="image/x-icon" href="../favicon.ico">
 </head>
 <body>
@@ -135,6 +135,23 @@
                                 <button onclick="showAddAreaModal()" class="btn btn-primary btn-sm">Add Your First Area</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Available Jobs Section -->
+            <section class="da-available-jobs">
+                <div class="section-header">
+                    <h2>🚗 Available Delivery Jobs</h2>
+                    <button onclick="refreshJobs()" class="btn btn-outline btn-sm">
+                        <span class="btn-icon">🔄</span>
+                        Refresh
+                    </button>
+                </div>
+                <div class="jobs-list" id="jobsList">
+                    <div class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <p>Loading available jobs...</p>
                     </div>
                 </div>
             </section>
@@ -420,9 +437,9 @@
     <script src="../js/api.js?v=202510172340"></script>
     <script src="../js/auth.js?v=202510172340"></script>
     <script src="../js/utils.js?v=202510172340"></script>
-    <script src="../js/location.js?v=202510180050"></script>
-    <script src="../js/ai-translations.js?v=202510180110"></script>
-    <script src="../js/delivery.js?v=202510180110"></script>
+    <script src="../js/location.js?v=202510190235_ETA"></script>
+    <script src="../js/ai-translations.js?v=202510190235_ETA"></script>
+    <script src="../js/delivery.js?v=202510190400_ACTIVE_FINAL"></script>
 
     <script>
         // Initialize dashboard
@@ -620,60 +637,7 @@
             showToast('Document upload feature coming soon!', 'info');
         }
 
-        // Load active orders
-        async function loadActiveOrders() {
-            const ordersList = document.getElementById('activeOrdersList');
-            
-            // Sample data - replace with actual API call
-            const sampleOrders = [
-                {
-                    id: 'PL-1284',
-                    customer: 'Sahana • Home Chef, Alwarpet',
-                    address: 'Akshara Residency, Teynampet',
-                    progress: 72,
-                    eta: 12,
-                    distance: 2.4
-                },
-                {
-                    id: 'PL-1285',
-                    customer: 'Rajesh • Street Food, Anna Nagar',
-                    address: 'Temple Towers, Mylapore',
-                    progress: 34,
-                    eta: 18,
-                    distance: 3.2
-                },
-                {
-                    id: 'PL-1289',
-                    customer: 'Priya • Restaurant, T. Nagar',
-                    address: 'Luxury Apartments, Adyar',
-                    progress: 88,
-                    eta: 8,
-                    distance: 1.8
-                }
-            ];
-            
-            ordersList.innerHTML = sampleOrders.map(order => `
-                <div class="order-card">
-                    <div class="order-header">
-                        <div class="order-id">${order.id}</div>
-                        <div class="order-customer">${order.customer}</div>
-                    </div>
-                    <div class="order-location">
-                        <span class="location-icon">📍</span>
-                        <span>${order.address}</span>
-                    </div>
-                    <div class="order-progress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${order.progress}%"></div>
-                        </div>
-                    </div>
-                    <div class="order-details">
-                        <span class="eta">ETA: ${order.eta} min • ${order.distance} km</span>
-                        <button class="view-route-btn">View route ></button>
-                    </div>
-                </div>
-            `).join('');
-        }
+        // loadActiveOrders is now defined in delivery.js
 
         // Load earnings chart
         function loadEarningsChart() {

@@ -549,6 +549,7 @@ def update_order_status(current_user_id, order_id):
     try:
         data = request.json
         new_status = data.get('status')
+        eta_minutes = data.get('eta_minutes')
         
         if not new_status:
             return jsonify({'success': False, 'error': 'Status is required'}), 400
@@ -560,8 +561,17 @@ def update_order_status(current_user_id, order_id):
         with DatabaseConnection.get_db() as conn:
             cursor = conn.cursor()
             
-            # Verify order belongs to chef
-            cursor.execute("SELECT chef_id FROM orders WHERE id = ?", (order_id,))
+            # Verify order belongs to chef and get full order details
+            cursor.execute("""
+                SELECT o.*, 
+                       c_user.full_name as consumer_name, c_user.latitude as consumer_lat, c_user.longitude as consumer_lon,
+                       chef_user.full_name as chef_name, chef_user.latitude as chef_lat, chef_user.longitude as chef_lon,
+                       chef_user.city as chef_city, chef_user.state as chef_state, chef_user.zip_code as chef_zip
+                FROM orders o
+                JOIN users c_user ON o.consumer_id = c_user.id
+                JOIN users chef_user ON o.chef_id = chef_user.id
+                WHERE o.id = ?
+            """, (order_id,))
             order = cursor.fetchone()
             
             if not order:
@@ -570,18 +580,35 @@ def update_order_status(current_user_id, order_id):
             if order['chef_id'] != current_user_id:
                 return jsonify({'success': False, 'error': 'Unauthorized'}), 403
             
+            # Calculate estimated ready time if ETA provided
+            expected_ready_time = None
+            if new_status == 'accepted' and eta_minutes:
+                from datetime import datetime, timedelta
+                expected_ready_time = (datetime.now() + timedelta(minutes=eta_minutes)).isoformat()
+            
             # Update status
-            cursor.execute("""
-                UPDATE orders 
-                SET order_status = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            """, (new_status, order_id))
+            if expected_ready_time:
+                cursor.execute("""
+                    UPDATE orders 
+                    SET order_status = ?, expected_ready_time = ?
+                    WHERE id = ?
+                """, (new_status, expected_ready_time, order_id))
+            else:
+                cursor.execute("""
+                    UPDATE orders 
+                    SET order_status = ?
+                    WHERE id = ?
+                """, (new_status, order_id))
             
             # Add to status history
             cursor.execute("""
                 INSERT INTO order_status_history (order_id, status, changed_by, notes)
                 VALUES (?, ?, ?, ?)
             """, (order_id, new_status, current_user_id, data.get('notes', '')))
+            
+            # If order is accepted with ETA, notify nearby delivery agents
+            if new_status == 'accepted' and eta_minutes and order['delivery_type'] == 'delivery':
+                notify_nearby_delivery_agents(cursor, order, eta_minutes)
             
             conn.commit()
             
@@ -592,7 +619,89 @@ def update_order_status(current_user_id, order_id):
             
     except Exception as e:
         print(f"Update order status error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def notify_nearby_delivery_agents(cursor, order, eta_minutes):
+    """Notify nearby delivery agents about new delivery job"""
+    try:
+        from datetime import datetime
+        from math import radians, sin, cos, sqrt, atan2
+        
+        # Get chef location
+        chef_lat = order['chef_lat']
+        chef_lon = order['chef_lon']
+        consumer_lat = order['consumer_lat']
+        consumer_lon = order['consumer_lon']
+        
+        if not all([chef_lat, chef_lon, consumer_lat, consumer_lon]):
+            print("Missing location data for distance calculation")
+            return
+        
+        # Calculate distance between chef and consumer (Haversine formula)
+        def calculate_distance(lat1, lon1, lat2, lon2):
+            R = 3959  # Earth's radius in miles
+            lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+            c = 2 * atan2(sqrt(a), sqrt(1-a))
+            return R * c
+        
+        delivery_distance = calculate_distance(chef_lat, chef_lon, consumer_lat, consumer_lon)
+        
+        # Find active delivery agents in the same area (within 10 miles of chef)
+        cursor.execute("""
+            SELECT id, full_name, latitude, longitude
+            FROM users
+            WHERE user_type = 'delivery'
+            AND is_active = 1
+            AND latitude IS NOT NULL
+            AND longitude IS NOT NULL
+        """)
+        
+        delivery_agents = cursor.fetchall()
+        
+        # Calculate base delivery fee (simple calculation)
+        base_fee = 3.99
+        distance_fee = delivery_distance * 0.50  # $0.50 per mile
+        estimated_earnings = round(base_fee + distance_fee, 2)
+        
+        notified_count = 0
+        for da in delivery_agents:
+            da_distance = calculate_distance(chef_lat, chef_lon, da['latitude'], da['longitude'])
+            
+            # Only notify DAs within 10 miles of the chef
+            if da_distance <= 10:
+                message = (
+                    f"🚗 New delivery job available!\n"
+                    f"Order: {order['order_number']}\n"
+                    f"Chef: {order['chef_name']} ({round(da_distance, 1)} miles from you)\n"
+                    f"Customer: {round(delivery_distance, 1)} miles from chef\n"
+                    f"Ready in: ~{eta_minutes} minutes\n"
+                    f"Estimated earnings: ${estimated_earnings}"
+                )
+                
+                cursor.execute("""
+                    INSERT INTO notifications (user_id, title, message, type, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (
+                    da['id'],
+                    '🚗 New Delivery Job Available',
+                    message,
+                    'delivery_job',
+                    datetime.now().isoformat()
+                ))
+                notified_count += 1
+        
+        print(f"✅ Notified {notified_count} nearby delivery agents about order {order['order_number']}")
+        
+    except Exception as e:
+        print(f"Error notifying delivery agents: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 @bp.route('/feedback', methods=['GET'])

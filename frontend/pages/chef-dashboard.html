@@ -864,11 +864,19 @@
     <script src="../js/auth.js"></script>
     <script src="../js/ai-translations.js"></script>
     <script src="../js/location.js"></script>
-    <script src="../js/chef.js"></script>
+    <script src="../js/chef.js?v=CHEFFIX004"></script>
     <script>
-        // Display user info
-        document.getElementById('userName').textContent = user.full_name || 'Chef';
-        document.getElementById('currentLocation').textContent = `${user.city || 'Unknown'}, ${user.state || 'Unknown'}`;
+        // Wait for chef.js to load, then use its user variable
+        document.addEventListener('DOMContentLoaded', () => {
+            const userData = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            // Display user info
+            const userNameEl = document.getElementById('userName');
+            const locationEl = document.getElementById('currentLocation');
+            
+            if (userNameEl) userNameEl.textContent = userData.full_name || 'Chef';
+            if (locationEl) locationEl.textContent = `${userData.city || 'Unknown'}, ${userData.state || 'Unknown'}`;
+        });
         
         // Initialize AI translations on page load
         document.addEventListener('DOMContentLoaded', async () => {

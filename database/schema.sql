@@ -126,6 +126,7 @@ CREATE TABLE IF NOT EXISTS orders (
     delivery_latitude REAL,
     delivery_longitude REAL,
     delivery_instructions TEXT,
+    special_instructions TEXT,
     
     -- Timing
     order_placed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

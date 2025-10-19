@@ -2,7 +2,7 @@
 console.log('🚚 delivery.js loading...');
 // Use existing API_URL if already defined (from auth.js or other files)
 // Don't redeclare if it already exists
-const DELIVERY_API_URL = typeof API_URL !== 'undefined' ? API_URL : 'http://localhost:5000/api';
+const DELIVERY_API_URL = '/api/delivery';
 
 // Safe showToast wrapper
 function safeShowToast(message, type = 'info') {
@@ -36,6 +36,7 @@ async function initDeliveryDashboard() {
         await loadDashboardData();
         await loadServiceAreas();
         await loadAvailableJobs();
+        await loadActiveOrders();
         await loadRecentDeliveries();
         await loadVerificationStatus();
 
@@ -98,7 +99,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 async function loadDashboardData() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${DELIVERY_API_URL}/delivery/dashboard`, {
+        const response = await fetch(`${DELIVERY_API_URL}/dashboard`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -167,7 +168,7 @@ async function showDefaultDashboard() {
 async function loadServiceAreas() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${DELIVERY_API_URL}/delivery/service-areas`, {
+        const response = await fetch(`${DELIVERY_API_URL}/service-areas`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -265,7 +266,7 @@ async function displayServiceAreas() {
 async function loadAvailableJobs() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${DELIVERY_API_URL}/delivery/available-jobs`, {
+        const response = await fetch(`${DELIVERY_API_URL}/available-jobs`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -299,49 +300,48 @@ async function displayAvailableJobs() {
             </div>
         `;
     } else {
-        // Calculate distances for each job
-        const jobsWithDistance = availableJobs.map(job => {
-            let distance = null;
-            if (currentLocation && job.pickup_latitude && job.pickup_longitude) {
-                distance = calculateDistance(
-                    currentLocation.latitude, 
-                    currentLocation.longitude,
-                    job.pickup_latitude, 
-                    job.pickup_longitude
-                );
-            }
-            return { ...job, distance };
+        // Sort by DA to chef distance (closest first)
+        const sortedJobs = [...availableJobs].sort((a, b) => {
+            return (a.da_to_chef_distance || 999) - (b.da_to_chef_distance || 999);
         });
 
-        // Sort by distance (closest first)
-        jobsWithDistance.sort((a, b) => {
-            if (a.distance === null) return 1;
-            if (b.distance === null) return -1;
-            return a.distance - b.distance;
-        });
-
-        list.innerHTML = jobsWithDistance.map(job => `
+        list.innerHTML = sortedJobs.map(job => `
             <div class="job-card">
                 <div class="job-header">
-                    <h4 data-i18n="delivery_job">Delivery Job #${job.id}</h4>
+                    <h4>🚗 ${job.order_number || 'Order #' + job.id}</h4>
                     <div class="job-badges">
-                        ${job.distance !== null ? `<span class="job-distance">${job.distance.toFixed(1)} km away</span>` : ''}
-                        <span class="job-earnings">$${job.estimated_earnings}</span>
+                        <span class="job-earnings" style="background: #28a745; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: 600;">💰 $${job.estimated_earnings}</span>
                     </div>
                 </div>
-                <div class="job-details">
-                    <p><strong data-i18n="pickup_from">Pickup from:</strong> 
-                        <a href="#" onclick="navigateToChef('${job.chef_name}', ${job.pickup_latitude}, ${job.pickup_longitude})" class="chef-link">${job.chef_name}</a>
-                        <br><span class="address-detail">${job.pickup_address}</span>
+                <div class="job-details" style="line-height: 1.8;">
+                    <p style="margin: 0.5rem 0;">
+                        <strong>📍 Chef:</strong> ${job.chef_name} 
+                        <span style="color: #666; font-size: 0.9rem;">(${job.da_to_chef_distance} miles from you)</span>
                     </p>
-                    <p><strong data-i18n="deliver_to">Deliver to:</strong> ${job.delivery_address}</p>
-                    <p><strong data-i18n="estimated_time">Time:</strong> ${job.estimated_time} min</p>
-                    ${job.distance !== null ? `<p><strong data-i18n="distance_to_pickup">Distance to pickup:</strong> ${job.distance.toFixed(1)} km</p>` : ''}
+                    <p style="margin: 0.5rem 0; padding-left: 1.5rem; color: #666; font-size: 0.9rem;">
+                        ${job.pickup_address}
+                    </p>
+                    <p style="margin: 0.5rem 0;">
+                        <strong>🏠 Customer:</strong> ${job.consumer_name || 'Customer'}
+                        <span style="color: #666; font-size: 0.9rem;">(${job.chef_to_consumer_distance} miles from chef)</span>
+                    </p>
+                    <p style="margin: 0.5rem 0; padding-left: 1.5rem; color: #666; font-size: 0.9rem;">
+                        ${job.delivery_address}
+                    </p>
+                    <p style="margin: 0.5rem 0;">
+                        <strong>⏰ Status:</strong> 
+                        <span style="color: ${job.order_status === 'ready' ? '#28a745' : '#ff9800'}; font-weight: 600;">
+                            ${job.status_text}
+                        </span>
+                    </p>
                 </div>
-                <div class="job-actions">
-                    <button onclick="acceptJob(${job.id})" class="btn btn-primary" data-i18n="accept">Accept</button>
-                    <button onclick="viewJobDetails(${job.id})" class="btn btn-outline" data-i18n="details">Details</button>
-                    <button onclick="navigateToPickup(${job.pickup_latitude}, ${job.pickup_longitude})" class="btn btn-secondary" data-i18n="navigate">Navigate</button>
+                <div class="job-actions" style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                    <button onclick="acceptJob(${job.id})" class="btn btn-primary" style="flex: 1;">
+                        ✓ Accept Job
+                    </button>
+                    <button onclick="navigateToChef('${job.chef_name}', ${job.pickup_latitude}, ${job.pickup_longitude})" class="btn btn-outline" style="flex: 0;">
+                        🗺️ Navigate
+                    </button>
                 </div>
             </div>
         `).join('');
@@ -357,7 +357,7 @@ async function displayAvailableJobs() {
 async function loadRecentDeliveries() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${DELIVERY_API_URL}/delivery/recent-deliveries`, {
+        const response = await fetch(`${DELIVERY_API_URL}/recent-deliveries`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -417,7 +417,7 @@ async function displayRecentDeliveries() {
 async function loadVerificationStatus() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${DELIVERY_API_URL}/delivery/verification-status`, {
+        const response = await fetch(`${DELIVERY_API_URL}/verification-status`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -491,7 +491,7 @@ function closeVerificationModal() {
 // Get country code from country name using AI
 async function getCountryCodeFromAI(countryName) {
     try {
-        const response = await fetch(`${DELIVERY_API_URL}/auth/translate`, {
+        const response = await fetch(`/api/auth/translate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -788,7 +788,7 @@ async function saveServiceArea() {
         }
 
         const token = localStorage.getItem('token');
-        const response = await fetch(`${DELIVERY_API_URL}/delivery/service-areas`, {
+        const response = await fetch(`${DELIVERY_API_URL}/service-areas`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -853,7 +853,7 @@ async function toggleStatus() {
 
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${DELIVERY_API_URL}/delivery/status`, {
+        const response = await fetch(`${DELIVERY_API_URL}/status`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -880,6 +880,39 @@ async function toggleStatus() {
 async function refreshJobs() {
     showToast('Refreshing jobs...', 'info');
     await loadAvailableJobs();
+}
+
+// Accept a delivery job
+async function acceptJob(orderId) {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/';
+            return;
+        }
+
+        const response = await fetch(`${DELIVERY_API_URL}/accept-job/${orderId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            showToast('Job accepted successfully! 🎉', 'success');
+            // Reload available jobs and active orders
+            await loadAvailableJobs();
+            await loadActiveOrders();
+        } else {
+            showToast(data.error || 'Failed to accept job', 'error');
+        }
+    } catch (error) {
+        console.error('Accept job error:', error);
+        showToast('Failed to accept job. Please try again.', 'error');
+    }
 }
 
 // Take selfie for verification
@@ -966,7 +999,7 @@ async function submitVerification() {
         }
         formData.append('selfie', selfieData);
 
-        const response = await fetch(`${DELIVERY_API_URL}/delivery/verification`, {
+        const response = await fetch(`${DELIVERY_API_URL}/verification`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -1054,19 +1087,216 @@ function removeServiceArea(areaId) {
     }
 }
 
-function acceptJob(jobId) {
-    // Implementation for accepting job
-    safeShowToast('Job acceptance functionality coming soon', 'info');
-}
-
 function viewJobDetails(jobId) {
     // Implementation for viewing job details
     safeShowToast('Job details functionality coming soon', 'info');
 }
 
-function loadActiveOrders() {
-    // Stub implementation - will be implemented later
-    console.log('loadActiveOrders called');
+// Load active orders
+let activeOrders = [];
+
+async function loadActiveOrders() {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/';
+            return;
+        }
+
+        const response = await fetch(`${DELIVERY_API_URL}/active-orders`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        activeOrders = data.orders || [];
+        displayActiveOrders();
+    } catch (error) {
+        console.error('Failed to load active orders:', error);
+    }
+}
+
+// Display active orders
+async function displayActiveOrders() {
+    const list = document.getElementById('activeOrdersList');
+    if (!list) return;
+
+    if (activeOrders.length === 0) {
+        list.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📦</div>
+                <h3>No Active Orders</h3>
+                <p>You haven't accepted any delivery jobs yet</p>
+            </div>
+        `;
+    } else {
+        list.innerHTML = activeOrders.map(order => `
+            <div class="job-card" style="border-left: 4px solid #ff9800;">
+                <div class="job-header">
+                    <h4>🚗 ${order.order_number || 'Order #' + order.id}</h4>
+                    <div class="job-badges">
+                        <span style="background: ${getStatusColor(order.order_status)}; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: 600;">
+                            ${order.status_text}
+                        </span>
+                    </div>
+                </div>
+                <div class="job-details" style="line-height: 1.8;">
+                    <p style="margin: 0.5rem 0;">
+                        <strong>📍 Pickup from Chef:</strong> ${order.chef_name}
+                        <span style="color: #666; font-size: 0.9rem;">(${order.da_to_chef_distance} miles from you)</span>
+                    </p>
+                    <p style="margin: 0.5rem 0; padding-left: 1.5rem; color: #666; font-size: 0.9rem;">
+                        ${order.chef_address}
+                    </p>
+                    <p style="margin: 0.5rem 0; padding-left: 1.5rem; color: #666; font-size: 0.9rem;">
+                        📞 ${order.chef_phone || 'N/A'}
+                    </p>
+                    <p style="margin: 0.5rem 0;">
+                        <strong>🏠 Deliver to:</strong> ${order.consumer_name || 'Customer'}
+                        <span style="color: #666; font-size: 0.9rem;">(${order.chef_to_consumer_distance} miles from chef)</span>
+                    </p>
+                    <p style="margin: 0.5rem 0; padding-left: 1.5rem; color: #666; font-size: 0.9rem;">
+                        ${order.delivery_address}
+                    </p>
+                    <p style="margin: 0.5rem 0; padding-left: 1.5rem; color: #666; font-size: 0.9rem;">
+                        📞 ${order.consumer_phone || 'N/A'}
+                    </p>
+                    <p style="margin: 0.5rem 0;">
+                        <strong>💰 Total:</strong> $${order.total_amount}
+                    </p>
+                </div>
+                <div class="job-actions" style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+                    ${getOrderActionButtons(order)}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Translate the page after updating content
+    if (typeof translatePage === 'function') {
+        await translatePage();
+    }
+}
+
+// Get status color
+function getStatusColor(status) {
+    const colors = {
+        'accepted': '#2196F3',
+        'preparing': '#ff9800',
+        'ready': '#4CAF50',
+        'picked_up': '#9C27B0',
+        'in_transit': '#673AB7'
+    };
+    return colors[status] || '#666';
+}
+
+// Get action buttons based on order status
+function getOrderActionButtons(order) {
+    const buttons = [];
+    
+    // Navigate to chef button (always available)
+    buttons.push(`
+        <button onclick="navigateToChef('${order.chef_name}', ${order.chef_latitude}, ${order.chef_longitude})" 
+                class="btn btn-outline" style="flex: 1;">
+            🗺️ Navigate to Chef
+        </button>
+    `);
+    
+    // Status-specific action buttons
+    if (order.order_status === 'accepted' || order.order_status === 'preparing' || order.order_status === 'ready') {
+        buttons.push(`
+            <button onclick="markAsPickedUp(${order.id})" class="btn btn-primary" style="flex: 1;">
+                ✓ Mark as Picked Up
+            </button>
+        `);
+    } else if (order.order_status === 'picked_up' || order.order_status === 'in_transit') {
+        buttons.push(`
+            <button onclick="navigateToCustomer('${order.consumer_name}', ${order.delivery_latitude}, ${order.delivery_longitude})" 
+                    class="btn btn-outline" style="flex: 1;">
+                🗺️ Navigate to Customer
+            </button>
+        `);
+        buttons.push(`
+            <button onclick="markAsDelivered(${order.id})" class="btn btn-success" style="flex: 1;">
+                ✓ Mark as Delivered
+            </button>
+        `);
+    }
+    
+    return buttons.join('');
+}
+
+// Mark order as picked up
+async function markAsPickedUp(orderId) {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/';
+            return;
+        }
+
+        const response = await fetch(`${DELIVERY_API_URL}/update-status/${orderId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: 'picked_up' })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            showToast('Order marked as picked up! 📦', 'success');
+            await loadActiveOrders();
+        } else {
+            showToast(data.error || 'Failed to update status', 'error');
+        }
+    } catch (error) {
+        console.error('Update status error:', error);
+        showToast('Failed to update status. Please try again.', 'error');
+    }
+}
+
+// Mark order as delivered
+async function markAsDelivered(orderId) {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/';
+            return;
+        }
+
+        const response = await fetch(`${DELIVERY_API_URL}/update-status/${orderId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: 'delivered' })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            showToast('Order delivered successfully! 🎉', 'success');
+            await loadActiveOrders();
+        } else {
+            showToast(data.error || 'Failed to update status', 'error');
+        }
+    } catch (error) {
+        console.error('Update status error:', error);
+        showToast('Failed to update status. Please try again.', 'error');
+    }
+}
+
+// Navigate to customer
+function navigateToCustomer(name, lat, lon) {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+    window.open(url, '_blank');
+    showToast(`Navigating to ${name}`, 'info');
 }
 
 function loadEarningsChart() {
@@ -1090,7 +1320,10 @@ if (typeof window !== 'undefined') {
     window.navigateToArea = navigateToArea;
     window.navigateToChef = navigateToChef;
     window.navigateToPickup = navigateToPickup;
+    window.navigateToCustomer = navigateToCustomer;
     window.toggleStatus = toggleStatus;
+    window.markAsPickedUp = markAsPickedUp;
+    window.markAsDelivered = markAsDelivered;
     window.showAddAreaModal = showAddAreaModal;
     window.closeAddAreaModal = closeAddAreaModal;
     window.showVerificationModal = showVerificationModal;

@@ -3,7 +3,12 @@
  * Handles dish management, orders, AI price suggestions, and feedback
  */
 
-const API_URL = 'http://localhost:5000/api';
+// Use API_URL from auth.js (already declared globally)
+// If not available, define it on window object
+if (typeof API_URL === 'undefined') {
+    window.API_URL = 'http://localhost:5000/api';
+}
+const CHEF_API_URL = window.API_URL || API_URL || 'http://localhost:5000/api';
 const token = localStorage.getItem('token');
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -46,7 +51,7 @@ async function initDashboard() {
 // Load dashboard statistics
 async function loadDashboardData() {
     try {
-        const response = await fetch(`${API_URL}/chef/dashboard`, {
+        const response = await fetch(`${CHEF_API_URL}/chef/dashboard`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -145,7 +150,7 @@ async function updateDashboardUI(data) {
 // Load dishes
 async function loadDishes() {
     try {
-        const response = await fetch(`${API_URL}/chef/dishes`, {
+        const response = await fetch(`${CHEF_API_URL}/chef/dishes`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -556,7 +561,7 @@ async function getAIPriceSuggestion() {
     suggestionDiv.innerHTML = '<div class="loading">🤖 AI is calculating the best price...</div>';
     
     try {
-        const response = await fetch(`${API_URL}/chef/price-suggestion`, {
+        const response = await fetch(`${CHEF_API_URL}/chef/price-suggestion`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -673,7 +678,7 @@ async function handleDishSubmit(event) {
     
     try {
         const dishId = form.dataset.dishId;
-        const url = dishId ? `${API_URL}/chef/dishes/${dishId}` : `${API_URL}/chef/dishes`;
+        const url = dishId ? `${CHEF_API_URL}/chef/dishes/${dishId}` : `${CHEF_API_URL}/chef/dishes`;
         const method = dishId ? 'PUT' : 'POST';
         
         const response = await fetch(url, {
@@ -748,7 +753,7 @@ async function editDish(dishId) {
 // Toggle dish availability
 async function toggleDishAvailability(dishId, currentStatus) {
     try {
-        const response = await fetch(`${API_URL}/chef/dishes/${dishId}`, {
+        const response = await fetch(`${CHEF_API_URL}/chef/dishes/${dishId}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -781,7 +786,7 @@ async function deleteDish(dishId) {
     }
     
     try {
-        const response = await fetch(`${API_URL}/chef/dishes/${dishId}`, {
+        const response = await fetch(`${CHEF_API_URL}/chef/dishes/${dishId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -806,7 +811,7 @@ async function deleteDish(dishId) {
 // Load orders
 async function loadOrders(status = 'all') {
     try {
-        const response = await fetch(`${API_URL}/chef/orders?status=${status}`, {
+        const response = await fetch(`${CHEF_API_URL}/chef/orders?status=${status}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -859,6 +864,20 @@ function showError(message) {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 5000);
 }
+
+// Expose functions to global scope for HTML onclick handlers
+window.initDashboard = initDashboard;
+window.viewOrders = viewOrders;
+window.editDish = editDish;
+window.toggleDishAvailability = toggleDishAvailability;
+window.toggleDishStatus = toggleDishAvailability; // Alias for compatibility
+window.deleteDish = deleteDish;
+window.openAddDishModal = openAddDishModal;
+window.showAddDishModal = showAddDishModal;
+window.closeAddDishModal = closeDishModal;
+window.closeDishModal = closeDishModal;
+window.handleDishSubmit = handleDishSubmit;
+window.updateOrderStatus = updateOrderStatus;
 
 // Initialize on page load
 if (document.readyState === 'loading') {

@@ -13,18 +13,25 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from middleware.auth import require_auth, require_role
-from utils.database import DatabaseHelper
-from config.database import get_db_connection
+from config.database import DatabaseConnection
 
 bp = Blueprint('consumer', __name__)
+
+def get_db_connection():
+    """Helper function to get database connection"""
+    import sqlite3
+    import os
+    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'potluck.db')
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 @bp.route('/profile')
 @require_auth
 @require_role('consumer')
-def get_profile():
+def get_profile(user_id):
     """Get consumer profile"""
     try:
-        user_id = request.current_user['user_id']
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -53,10 +60,9 @@ def get_profile():
 
 @bp.route('/dishes')
 @require_auth
-def get_dishes():
+def get_dishes(user_id):
     """Get available dishes with chef information"""
     try:
-        user_id = request.current_user['user_id']
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -127,10 +133,9 @@ def get_dishes():
 @bp.route('/orders', methods=['GET'])
 @require_auth
 @require_role('consumer')
-def get_orders():
+def get_orders(user_id):
     """Get consumer orders"""
     try:
-        user_id = request.current_user['user_id']
         status = request.args.get('status', 'all')
         
         conn = get_db_connection()
@@ -182,10 +187,9 @@ def get_orders():
 @bp.route('/orders', methods=['POST'])
 @require_auth
 @require_role('consumer')
-def create_order():
+def create_order(user_id):
     """Create new order"""
     try:
-        user_id = request.current_user['user_id']
         data = request.json
         
         # Validate required fields
@@ -196,8 +200,16 @@ def create_order():
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Get the next order sequence number for today
+        today = datetime.now().strftime('%Y%m%d')
+        cursor.execute('''
+            SELECT COUNT(*) FROM orders 
+            WHERE order_number LIKE ?
+        ''', (f'POT-{today}-%',))
+        order_count = cursor.fetchone()[0] + 1
+        
         # Generate order number
-        order_number = f"POT-{datetime.now().strftime('%Y%m%d')}-{user_id:04d}{cursor.lastrowid or 1:04d}"
+        order_number = f"POT-{today}-{order_count:04d}"
         
         # Create order
         cursor.execute('''
@@ -218,11 +230,11 @@ def create_order():
             data.get('tax', 0),
             data['total_amount'],
             data['delivery_type'],
-            data.get('delivery_address'),
-            data.get('special_instructions'),
+            data.get('delivery_address', ''),
+            data.get('special_instructions', ''),
             data.get('payment_method', 'cash'),
             'pending',
-            datetime.now()
+            datetime.now().isoformat()
         ))
         
         order_id = cursor.lastrowid
@@ -236,7 +248,7 @@ def create_order():
             'New Order Received',
             f'You have a new order #{order_number}',
             'order',
-            datetime.now()
+            datetime.now().isoformat()
         ))
         
         conn.commit()
@@ -251,16 +263,17 @@ def create_order():
         
     except Exception as e:
         print(f"Error creating order: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
 @bp.route('/orders/<int:order_id>/rate', methods=['POST'])
 @require_auth
 @require_role('consumer')
-def rate_order(order_id):
+def rate_order(user_id, order_id):
     """Rate order (food, chef, delivery agent) and add tip"""
     try:
-        user_id = request.current_user['user_id']
         data = request.json
         
         conn = get_db_connection()
@@ -345,10 +358,9 @@ def rate_order(order_id):
 @bp.route('/favorites', methods=['GET'])
 @require_auth
 @require_role('consumer')
-def get_favorites():
+def get_favorites(user_id):
     """Get user's favorite dishes"""
     try:
-        user_id = request.current_user['user_id']
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -377,10 +389,9 @@ def get_favorites():
 @bp.route('/favorites', methods=['POST'])
 @require_auth
 @require_role('consumer')
-def add_favorite():
+def add_favorite(user_id):
     """Add dish to favorites"""
     try:
-        user_id = request.current_user['user_id']
         data = request.json
         dish_id = data.get('dish_id')
         
@@ -418,10 +429,9 @@ def add_favorite():
 @bp.route('/favorites/<int:dish_id>', methods=['DELETE'])
 @require_auth
 @require_role('consumer')
-def remove_favorite(dish_id):
+def remove_favorite(user_id, dish_id):
     """Remove dish from favorites"""
     try:
-        user_id = request.current_user['user_id']
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -442,10 +452,9 @@ def remove_favorite(dish_id):
 @bp.route('/notifications', methods=['GET'])
 @require_auth
 @require_role('consumer')
-def get_notifications():
+def get_notifications(user_id):
     """Get user notifications"""
     try:
-        user_id = request.current_user['user_id']
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -471,10 +480,9 @@ def get_notifications():
 @bp.route('/notifications/<int:notif_id>/read', methods=['PUT'])
 @require_auth
 @require_role('consumer')
-def mark_notification_read(notif_id):
+def mark_notification_read(user_id, notif_id):
     """Mark notification as read"""
     try:
-        user_id = request.current_user['user_id']
         conn = get_db_connection()
         cursor = conn.cursor()
         

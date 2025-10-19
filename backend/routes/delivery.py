@@ -306,12 +306,20 @@ def update_order_status(user_id, order_id):
         
         now = datetime.utcnow().isoformat()
         if new_status == 'picked_up':
+            # Enforce: can pick up only when chef marked as ready
+            if order['order_status'] != 'ready':
+                conn.close()
+                return jsonify({'error': 'Order is not ready for pickup yet'}), 400
             conn.execute('''
                 UPDATE orders
                 SET order_status = 'picked_up', picked_up_at = ?
                 WHERE id = ?
             ''', (now, order_id))
         elif new_status == 'delivered':
+            # Enforce: can deliver only after picked_up
+            if order['order_status'] != 'picked_up':
+                conn.close()
+                return jsonify({'error': 'Order must be picked up before marking delivered'}), 400
             conn.execute('''
                 UPDATE orders
                 SET order_status = 'delivered', delivered_at = ?

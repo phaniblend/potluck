@@ -527,9 +527,15 @@ def get_orders(current_user_id):
             cursor.execute(query, (current_user_id,))
             orders = cursor.fetchall()
             
-            # Parse JSON items
+            # Parse JSON items and fetch dish names
             for order in orders:
-                order['items'] = json.loads(order['items'] or '[]')
+                items = json.loads(order['items'] or '[]')
+                # Enrich items with dish names
+                for item in items:
+                    cursor.execute("SELECT name FROM dishes WHERE id = ?", (item['dish_id'],))
+                    dish = cursor.fetchone()
+                    item['dish_name'] = dish['name'] if dish else f"Unknown Dish (ID: {item['dish_id']})"
+                order['items'] = items
             
             return jsonify({
                 'success': True,

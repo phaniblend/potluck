@@ -44,7 +44,9 @@ async function initConsumerDashboard() {
         
         // Update UI with user info
         document.getElementById('userName').textContent = user.full_name || 'User';
-        document.getElementById('userLocation').textContent = `📍 ${user.location || 'Unknown'}`;
+        
+        // Auto-detect location
+        await loadCurrentLocation();
         
         // Load data (with error handling to prevent infinite loops)
         try {
@@ -101,6 +103,52 @@ function logout() {
     localStorage.removeItem('user');
     localStorage.removeItem('cart');
     window.location.href = '/';
+}
+
+// Load current location
+async function loadCurrentLocation() {
+    try {
+        // Get location from localStorage or user profile
+        const storedLocation = localStorage.getItem('userLocation');
+        if (storedLocation) {
+            const location = JSON.parse(storedLocation);
+            document.getElementById('userLocation').textContent = `📍 ${location.city}, ${location.state}`;
+        } else if (currentUser && currentUser.city && currentUser.state) {
+            // Use location from user profile
+            document.getElementById('userLocation').textContent = `📍 ${currentUser.city}, ${currentUser.state}`;
+        } else {
+            // Try to detect location automatically
+            try {
+                if ('geolocation' in navigator) {
+                    const position = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject);
+                    });
+                    
+                    // Reverse geocode to get city/state
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`);
+                    const data = await response.json();
+                    
+                    const location = {
+                        city: data.address.city || data.address.town || data.address.village || 'Unknown',
+                        state: data.address.state || '',
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    };
+                    
+                    localStorage.setItem('userLocation', JSON.stringify(location));
+                    document.getElementById('userLocation').textContent = `📍 ${location.city}, ${location.state}`;
+                } else {
+                    document.getElementById('userLocation').textContent = `📍 Location unavailable`;
+                }
+            } catch (error) {
+                console.warn('Could not detect location:', error);
+                document.getElementById('userLocation').textContent = `📍 Location unavailable`;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load location:', error);
+        document.getElementById('userLocation').textContent = `📍 Location unavailable`;
+    }
 }
 
 // Load Dishes
@@ -454,6 +502,9 @@ function proceedToCheckout() {
     }
     
     modal.style.display = 'flex';
+    
+    // Trigger delivery type update to set correct fees on initial load
+    updateDeliveryType();
 }
 
 function updateDeliveryType() {
@@ -608,7 +659,7 @@ function displayActiveOrders() {
                 <div class="order-status ${order.order_status}">${formatStatus(order.order_status)}</div>
             </div>
             <div class="order-items">
-                ${JSON.parse(order.items).map(item => `
+                ${(typeof order.items === 'string' ? JSON.parse(order.items) : order.items).map(item => `
                     <div class="order-item">
                         <span>${item.dish_name || 'Dish'} x${item.quantity}</span>
                         <span>$${(item.price * item.quantity).toFixed(2)}</span>
@@ -662,7 +713,7 @@ function displayOrderHistory() {
                 <div class="order-status delivered">Delivered</div>
             </div>
             <div class="order-items">
-                ${JSON.parse(order.items).map(item => `
+                ${(typeof order.items === 'string' ? JSON.parse(order.items) : order.items).map(item => `
                     <div class="order-item">
                         <span>${item.dish_name || 'Dish'} x${item.quantity}</span>
                         <span>$${(item.price * item.quantity).toFixed(2)}</span>

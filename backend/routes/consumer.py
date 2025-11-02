@@ -173,6 +173,18 @@ def get_orders(user_id):
             ''', (user_id,))
         
         orders = [dict(row) for row in cursor.fetchall()]
+        
+        # Parse JSON items and fetch dish names
+        for order in orders:
+            if 'items' in order and order['items']:
+                items = json.loads(order['items']) if isinstance(order['items'], str) else order['items']
+                # Enrich items with dish names
+                for item in items:
+                    cursor.execute("SELECT name FROM dishes WHERE id = ?", (item['dish_id'],))
+                    dish = cursor.fetchone()
+                    item['dish_name'] = dish['name'] if dish else f"Unknown Dish (ID: {item['dish_id']})"
+                order['items'] = items
+        
         conn.close()
         
         return jsonify({

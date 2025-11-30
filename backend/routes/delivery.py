@@ -169,14 +169,15 @@ def available_jobs(user_id):
                    c.latitude as chef_latitude, c.longitude as chef_longitude,
                    c.zip_code as chef_zip,
                    consumer.full_name as consumer_name,
-                   consumer.latitude as consumer_lat, consumer.longitude as consumer_lon
+                   consumer.latitude as consumer_lat, consumer.longitude as consumer_lon,
+                   consumer.zip_code as consumer_zip
             FROM orders o
             JOIN users c ON o.chef_id = c.id
             JOIN users consumer ON o.consumer_id = consumer.id
             WHERE o.order_status IN ('accepted', 'preparing', 'ready')
             AND o.delivery_agent_id IS NULL
             AND o.delivery_type = 'delivery'
-            AND c.zip_code IN ({})
+            AND consumer.zip_code IN ({})
             ORDER BY o.order_placed_at ASC
             LIMIT 20
         '''.format(','.join('?' * len(service_zips))), service_zips)

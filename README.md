@@ -7,7 +7,7 @@ A peer-to-peer marketplace connecting home chefs with local food lovers.
 - Backend: Flask (Python)
 - Database: SQLite
 - Frontend: Vanilla JavaScript, HTML5, CSS3
-- Deployment: Render.com
+- Deployment: Railway
 
 ## Setup Instructions
 1. Navigate to backend directory: `cd backend`

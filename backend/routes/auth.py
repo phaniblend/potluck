@@ -323,16 +323,27 @@ def signup():
         
         print(f"✅ Valid email: {data['email']}")
         
-        # Check if user exists
-        print("🔍 Checking if user exists...")
+        # Check if user exists by email
+        print("🔍 Checking if user exists by email...")
         try:
             existing_user = DatabaseHelper.get_user_by_email(data['email'])
             if existing_user:
                 print(f"❌ User already exists: {data['email']}")
                 return jsonify({'success': False, 'error': 'Email already registered'}), 400
-            print("✅ User does not exist, can proceed")
+            print("✅ Email is available")
         except Exception as e:
             print(f"⚠️ Database check error (continuing): {e}")
+        
+        # Check if phone number already exists
+        print("🔍 Checking if phone number exists...")
+        try:
+            existing_phone = DatabaseHelper.get_user_by_phone(data['phone'])
+            if existing_phone:
+                print(f"❌ Phone number already registered: {data['phone']}")
+                return jsonify({'success': False, 'error': 'Phone number already registered'}), 400
+            print("✅ Phone number is available")
+        except Exception as e:
+            print(f"⚠️ Phone check error (continuing): {e}")
         
         # Basic password validation
         if len(data['password']) < 8:
@@ -377,6 +388,15 @@ def signup():
             print(f"❌ Database creation error: {e}")
             import traceback
             traceback.print_exc()
+            error_msg = str(e)
+            # Check for specific database constraint errors
+            if 'UNIQUE constraint failed' in error_msg:
+                if 'email' in error_msg.lower():
+                    return jsonify({'success': False, 'error': 'Email already registered'}), 400
+                elif 'phone' in error_msg.lower():
+                    return jsonify({'success': False, 'error': 'Phone number already registered'}), 400
+                else:
+                    return jsonify({'success': False, 'error': 'A user with this information already exists'}), 400
             return jsonify({'success': False, 'error': 'Database error creating user'}), 500
         
         if not user_id:

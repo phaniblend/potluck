@@ -65,6 +65,13 @@ def seed_database():
             'city': 'Dallas', 'state': 'TX', 'zip_code': '75203', 'latitude': 32.7931, 'longitude': -96.8198,
             'consumer_rating': 4.7, 'total_orders_placed': 8, 'dietary_preferences': '[]'
         },
+        # New test users for E2E testing (same area)
+        {
+            'email': 'cathy@demo.tld', 'phone': '+15551234567', 'password': 'Passw0rd!',
+            'full_name': 'Cathy Consumer', 'user_type': 'consumer', 'address': '123 Main Street, Philadelphia, PA 19146',
+            'city': 'Philadelphia', 'state': 'PA', 'zip_code': '19146', 'latitude': 39.9442, 'longitude': -75.1665,
+            'consumer_rating': 0, 'total_orders_placed': 0, 'dietary_preferences': '[]'
+        },
         
         # Chefs
         {
@@ -94,6 +101,16 @@ def seed_database():
             'max_orders_per_day': 12, 'preparation_time': 30, 'is_available': 1,
             'chef_rating': 4.7, 'total_dishes_sold': 89
         },
+        # New test chef for E2E testing
+        {
+            'email': 'chef.anu@demo.tld', 'phone': '+15551234568', 'password': 'Passw0rd!',
+            'full_name': 'Chef Anu', 'user_type': 'chef', 'address': '456 Chef Avenue, Philadelphia, PA 19146',
+            'city': 'Philadelphia', 'state': 'PA', 'zip_code': '19146', 'latitude': 39.9542, 'longitude': -75.1765,
+            'chef_bio': 'Expert chef specializing in Indian and fusion cuisine',
+            'chef_specialties': '["indian", "fusion", "vegetarian"]', 'kitchen_type': 'home',
+            'max_orders_per_day': 15, 'preparation_time': 45, 'is_available': 1,
+            'chef_rating': 0, 'total_dishes_sold': 0
+        },
         
         # Delivery Agents
         {
@@ -116,6 +133,14 @@ def seed_database():
             'city': 'Dallas', 'state': 'TX', 'zip_code': '75209', 'latitude': 32.8423, 'longitude': -96.8882,
             'vehicle_type': 'scooter', 'vehicle_number': 'SCOOT-456', 'driving_license': 'DL456789123',
             'delivery_radius': 8, 'current_status': 'online', 'delivery_rating': 4.9, 'total_deliveries': 134
+        },
+        # New test delivery agent for E2E testing
+        {
+            'email': 'ravi.rider@demo.tld', 'phone': '+15551234569', 'password': 'Passw0rd!',
+            'full_name': 'Ravi Rider', 'user_type': 'delivery', 'address': '789 Rider Road, Philadelphia, PA 19146',
+            'city': 'Philadelphia', 'state': 'PA', 'zip_code': '19146', 'latitude': 39.9342, 'longitude': -75.1565,
+            'vehicle_type': 'car', 'vehicle_number': 'PA-XYZ789', 'driving_license': 'DL789456123',
+            'delivery_radius': 5, 'current_status': 'online', 'delivery_rating': 0, 'total_deliveries': 0
         }
     ]
     
@@ -144,7 +169,7 @@ def seed_database():
     print(f"Created {len(users_data)} users")
     
     # 2. CHEF AGREEMENTS
-    chef_emails = ['chef.maria@email.com', 'chef.raj@email.com', 'chef.anna@email.com']
+    chef_emails = ['chef.maria@email.com', 'chef.raj@email.com', 'chef.anna@email.com', 'chef.anu@demo.tld']
     for chef_email in chef_emails:
         cursor.execute('''
             INSERT INTO chef_agreements (chef_id, agreement_version, agreed_terms, ip_address)
@@ -217,6 +242,20 @@ def seed_database():
             'price': 8.99, 'cuisine_type': 'american', 'meal_type': 'lunch', 'ingredients': '["whole wheat tortilla", "hummus", "cucumber", "tomatoes", "lettuce"]',
             'allergens': '["gluten", "sesame"]', 'dietary_tags': '["vegetarian", "vegan", "healthy"]', 'spice_level': 1, 'portion_size': '1 large wrap',
             'calories': 350, 'preparation_time': 10, 'max_quantity_per_day': 25, 'rating': 4.4, 'total_orders': 16
+        },
+        
+        # Chef Anu's dishes
+        {
+            'chef_email': 'chef.anu@demo.tld', 'name': 'Chicken Curry Bowl', 'description': 'Tender chicken in aromatic curry sauce with basmati rice',
+            'price': 16.99, 'cuisine_type': 'indian', 'meal_type': 'dinner', 'ingredients': '["chicken", "onions", "tomatoes", "spices", "rice"]',
+            'allergens': '[]', 'dietary_tags': '["gluten-free"]', 'spice_level': 3, 'portion_size': '1 serving with rice',
+            'calories': 520, 'preparation_time': 45, 'max_quantity_per_day': 12, 'rating': 4.9, 'total_orders': 67
+        },
+        {
+            'chef_email': 'chef.anu@demo.tld', 'name': 'Veg Pulao', 'description': 'Fragrant basmati rice with mixed vegetables and aromatic spices',
+            'price': 14.99, 'cuisine_type': 'indian', 'meal_type': 'dinner', 'ingredients': '["rice", "vegetables", "spices", "cashews"]',
+            'allergens': '["nuts"]', 'dietary_tags': '["vegetarian", "vegan", "gluten-free"]', 'spice_level': 2, 'portion_size': '1 large serving',
+            'calories': 480, 'preparation_time': 40, 'max_quantity_per_day': 18, 'rating': 4.8, 'total_orders': 54
         }
     ]
     
@@ -290,7 +329,8 @@ def seed_database():
         {'delivery_email': 'delivery.tom@email.com', 'area_name': 'Uptown', 'zip_code': '75204', 'city': 'Dallas', 'state': 'TX', 'is_primary': 0},
         {'delivery_email': 'delivery.lisa@email.com', 'area_name': 'Deep Ellum', 'zip_code': '75226', 'city': 'Dallas', 'state': 'TX', 'is_primary': 1},
         {'delivery_email': 'delivery.venkat@email.com', 'area_name': 'Oak Lawn', 'zip_code': '75219', 'city': 'Dallas', 'state': 'TX', 'is_primary': 1},
-        {'delivery_email': 'delivery.venkat@email.com', 'area_name': 'Bishop Arts', 'zip_code': '75208', 'city': 'Dallas', 'state': 'TX', 'is_primary': 0}
+        {'delivery_email': 'delivery.venkat@email.com', 'area_name': 'Bishop Arts', 'zip_code': '75208', 'city': 'Dallas', 'state': 'TX', 'is_primary': 0},
+        {'delivery_email': 'ravi.rider@demo.tld', 'area_name': 'Philadelphia Center', 'zip_code': '19146', 'city': 'Philadelphia', 'state': 'PA', 'is_primary': 1}
     ]
     
     for area in service_areas_data:
@@ -422,6 +462,10 @@ def seed_database():
     print("   Consumer: john.doe@email.com / password123")
     print("   Chef: chef.maria@email.com / password123")
     print("   Delivery: delivery.tom@email.com / password123")
+    print("\nNew Test Users (same area - Philadelphia, PA):")
+    print("   Consumer: cathy@demo.tld / Passw0rd!")
+    print("   Chef: chef.anu@demo.tld / Passw0rd!")
+    print("   Delivery: ravi.rider@demo.tld / Passw0rd!")
 
 if __name__ == "__main__":
     seed_database()

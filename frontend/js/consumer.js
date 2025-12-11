@@ -669,6 +669,9 @@ function displayActiveOrders() {
             <div class="order-footer">
                 <div class="order-total">Total: $${order.total_amount.toFixed(2)}</div>
                 <div class="order-actions">
+                    ${order.order_status === 'pending' ? `
+                        <button class="btn-sm btn-danger" onclick="cancelOrder(${order.id})">❌ Cancel</button>
+                    ` : ''}
                     ${order.order_status === 'delivered' ? `
                         <button class="btn-sm btn-primary" onclick="showRatingModal(${order.id})">Rate Order</button>
                     ` : ''}
@@ -1218,8 +1221,163 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-function viewOrderDetails(orderId) {
-    showToast('Order details coming soon!', 'info');
+async function viewOrderDetails(orderId) {
+    try {
+        // Find the order in activeOrders or orderHistory
+        let order = activeOrders.find(o => o.id === orderId) || orderHistory.find(o => o.id === orderId);
+        
+        if (!order) {
+            showToast('Order not found', 'error');
+            return;
+        }
+        
+        // Parse items if it's a string
+        const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        
+        // Create modal HTML
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px;">
+                <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
+                <h2>📦 Order Details</h2>
+                
+                <div class="order-details-section">
+                    <h3>Order Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Order Number:</span>
+                        <span class="detail-value"><strong>${order.order_number}</strong></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value status-badge status-${order.order_status}">${formatStatus(order.order_status)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Order Placed:</span>
+                        <span class="detail-value">${new Date(order.order_placed_at).toLocaleString()}</span>
+                    </div>
+                    ${order.chef_name ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Chef:</span>
+                            <span class="detail-value">👨‍🍳 ${order.chef_name}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="order-details-section">
+                    <h3>Items Ordered</h3>
+                    <div class="order-items-list">
+                        ${items.map(item => `
+                            <div class="detail-item">
+                                <div>
+                                    <strong>${item.dish_name || 'Dish'}</strong>
+                                    <span class="item-quantity">x${item.quantity}</span>
+                                </div>
+                                <span class="item-price">$${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="order-details-section">
+                    <h3>Delivery Details</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Type:</span>
+                        <span class="detail-value">${order.delivery_type === 'delivery' ? '🚗 Delivery' : '🏃 Pickup'}</span>
+                    </div>
+                    ${order.delivery_address ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Address:</span>
+                            <span class="detail-value">${order.delivery_address}</span>
+                        </div>
+                    ` : ''}
+                    ${order.special_instructions ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Special Instructions:</span>
+                            <span class="detail-value">${order.special_instructions}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="order-details-section">
+                    <h3>Payment Summary</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Subtotal:</span>
+                        <span class="detail-value">$${order.subtotal.toFixed(2)}</span>
+                    </div>
+                    ${order.delivery_fee > 0 ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Delivery Fee:</span>
+                            <span class="detail-value">$${order.delivery_fee.toFixed(2)}</span>
+                        </div>
+                    ` : ''}
+                    <div class="detail-row">
+                        <span class="detail-label">Tax:</span>
+                        <span class="detail-value">$${order.tax.toFixed(2)}</span>
+                    </div>
+                    <div class="detail-row detail-total">
+                        <span class="detail-label"><strong>Total:</strong></span>
+                        <span class="detail-value"><strong>$${order.total_amount.toFixed(2)}</strong></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Payment Method:</span>
+                        <span class="detail-value">💵 ${order.payment_method === 'cash' ? 'Cash on Delivery' : 'Card'}</span>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Close on outside click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error viewing order details:', error);
+        showToast('Failed to load order details', 'error');
+    }
+}
+
+async function cancelOrder(orderId) {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/';
+            return;
+        }
+        
+        const response = await fetch(`${CONSUMER_API_URL}/consumer/orders/${orderId}/cancel`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showToast('Order cancelled successfully! 🚫', 'success');
+            // Refresh orders to show updated status
+            await loadActiveOrders();
+            await loadOrderHistory();
+        } else {
+            showToast(data.error || 'Failed to cancel order', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Cancel order error:', error);
+        showToast('Failed to cancel order. Please try again.', 'error');
+    }
 }
 
 function setupRealTimeUpdates() {
@@ -1250,6 +1408,7 @@ window.showFavorites = showFavorites;
 window.repeatLastOrder = repeatLastOrder;
 window.reorder = reorder;
 window.viewOrderDetails = viewOrderDetails;
+window.cancelOrder = cancelOrder;
 // Rating functions
 window.showRatingModal = showRatingModal;
 window.closeRatingModal = closeRatingModal;

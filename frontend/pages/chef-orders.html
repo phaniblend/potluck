@@ -25,6 +25,11 @@
             color: #333;
         }
 
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
         .back-btn {
             background: #666;
             color: white;
@@ -38,6 +43,21 @@
 
         .back-btn:hover {
             background: #555;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
         }
 
         .orders-tabs {
@@ -220,7 +240,10 @@
     <div class="orders-container">
         <div class="orders-header">
             <h1>📦 Orders</h1>
-            <a href="chef-dashboard.html" class="back-btn">← Back to Dashboard</a>
+            <div class="header-actions">
+                <a href="chef-dashboard.html" class="back-btn">← Back to Dashboard</a>
+                <button onclick="logout()" class="logout-btn">🚪 Logout</button>
+            </div>
         </div>
 
         <div class="orders-tabs">

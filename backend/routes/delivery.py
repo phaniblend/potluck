@@ -338,7 +338,7 @@ def update_order_status(user_id, order_id):
         
         conn.commit()
         conn.close()
-        return jsonify({'message': 'Order status updated', 'status': new_status})
+        return jsonify({'success': True, 'message': 'Order status updated', 'status': new_status})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

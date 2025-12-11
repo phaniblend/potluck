@@ -784,3 +784,161 @@ textarea {
     }
 }
 
+/* Order Details Modal */
+.order-details-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.order-details-section h3 {
+    font-size: 1.1rem;
+    color: var(--text-dark);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    color: var(--text-light);
+    font-size: 0.95rem;
+}
+
+.detail-value {
+    color: var(--text-dark);
+    font-weight: 500;
+}
+
+.detail-total {
+    font-size: 1.1rem;
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+    border-top: 2px solid var(--border-color);
+}
+
+.order-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.item-quantity {
+    color: var(--text-light);
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+}
+
+.item-price {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.btn-sm.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-sm.btn-danger:hover {
+    background-color: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-accepted {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.status-preparing {
+    background-color: #e0e7ff;
+    color: #4338ca;
+}
+
+.status-ready {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-picked_up {
+    background-color: #cffafe;
+    color: #155e75;
+}
+
+.status-delivered {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-cancelled {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+

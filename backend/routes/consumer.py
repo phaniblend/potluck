@@ -367,6 +367,72 @@ def rate_order(user_id, order_id):
         return jsonify({'error': str(e)}), 500
 
 
+@bp.route('/orders/<int:order_id>/cancel', methods=['PUT'])
+@require_auth
+@require_role('consumer')
+def cancel_order(user_id, order_id):
+    """Cancel an order if chef hasn't accepted yet"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verify order belongs to user
+        cursor.execute('SELECT * FROM orders WHERE id = ? AND consumer_id = ?', (order_id, user_id))
+        order = cursor.fetchone()
+        
+        if not order:
+            conn.close()
+            return jsonify({'error': 'Order not found'}), 404
+        
+        # Check if order can be cancelled
+        if order['order_status'] == 'pending':
+            # Order can be cancelled
+            cursor.execute('''
+                UPDATE orders
+                SET order_status = 'cancelled', 
+                    cancelled_by = 'consumer',
+                    cancellation_reason = 'Cancelled by customer'
+                WHERE id = ?
+            ''', (order_id,))
+            
+            # Create notification for chef
+            cursor.execute('''
+                INSERT INTO notifications (user_id, title, message, type, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                order['chef_id'],
+                'Order Cancelled',
+                f'Order #{order["order_number"]} has been cancelled by the customer',
+                'order',
+                datetime.now().isoformat()
+            ))
+            
+            conn.commit()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Order cancelled successfully'
+            })
+        else:
+            # Order cannot be cancelled
+            conn.close()
+            status_messages = {
+                'accepted': 'Chef is preparing your order and it cannot be cancelled',
+                'preparing': 'Chef is preparing your order and it cannot be cancelled',
+                'ready': 'Your order is ready for pickup and cannot be cancelled',
+                'picked_up': 'Your order has been picked up and cannot be cancelled',
+                'delivered': 'Your order has already been delivered',
+                'cancelled': 'This order has already been cancelled'
+            }
+            message = status_messages.get(order['order_status'], 'Order cannot be cancelled at this stage')
+            return jsonify({'error': message}), 400
+        
+    except Exception as e:
+        print(f"Error cancelling order: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @bp.route('/favorites', methods=['GET'])
 @require_auth
 @require_role('consumer')

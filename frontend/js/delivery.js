@@ -1248,12 +1248,14 @@ async function markAsPickedUp(orderId) {
 
         const data = await response.json();
 
-        if (response.ok && data.success) {
+        if (response.ok) {
             showToast('Order marked as picked up! 📦', 'success');
-            await loadActiveOrders();
         } else {
             showToast(data.error || 'Failed to update status', 'error');
         }
+        
+        // Always refresh UI to show current state
+        await loadActiveOrders();
     } catch (error) {
         console.error('Update status error:', error);
         showToast('Failed to update status. Please try again.', 'error');
@@ -1280,12 +1282,14 @@ async function markAsDelivered(orderId) {
 
         const data = await response.json();
 
-        if (response.ok && data.success) {
+        if (response.ok) {
             showToast('Order delivered successfully! 🎉', 'success');
-            await loadActiveOrders();
         } else {
             showToast(data.error || 'Failed to update status', 'error');
         }
+        
+        // Always refresh UI to show current state
+        await loadActiveOrders();
     } catch (error) {
         console.error('Update status error:', error);
         showToast('Failed to update status. Please try again.', 'error');

@@ -25,11 +25,15 @@ RUN python database/init_db.py && python database/seed_test_data.py
 # Create necessary directories
 RUN mkdir -p /tmp/uploads /tmp/logs
 
+# Create startup script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Set working directory to backend for the application
 WORKDIR /app/backend
 
 # Expose port
 EXPOSE $PORT
 
-# Start command - use shell form to expand PORT environment variable
-CMD gunicorn app:app --bind 0.0.0.0:$PORT --workers 4 --timeout 120 
+# Start command - use startup script to ensure database exists
+CMD ["/app/start.sh"] 
